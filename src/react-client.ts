@@ -40,6 +40,8 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
         if (client.receiveSessionToken()) {
             return;
         }
+    }, [client]);
+    React.useEffect(() => {
         if (client.haveSessionToken()) {
             if (shouldMonitorAccessTokens) {
                 client.monitorAccessToken();
@@ -58,7 +60,21 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
                 client.stopMonitoringAccessToken();
             }
         };
-    }, [client]);
+    }, [
+        client,
+        shouldMonitorAccessTokens,
+        shouldPerformLogin,
+        shouldRequireLogin,
+    ]);
+    React.useEffect(() => {
+        if (shouldRequireLogin) {
+            client.getAccessToken().then((result) => {
+                if (!result?.token) {
+                    client.authorize();
+                }
+            });
+        }
+    }, [client, shouldRequireLogin]);
 
     return React.createElement(
         OidcJwtContext.Provider,
@@ -69,8 +85,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
 export function usePromiseResult<T>(
     f: () => Promise<T> | null | undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    deps: any[]
+    deps: unknown[]
 ): T | null {
     const [value, setValue] = React.useState<T | null>(null);
     React.useEffect(() => {
@@ -98,15 +113,19 @@ export function useUserInfo(): Record<string, unknown> | null {
     return usePromiseResult(() => client?.getUserInfo(), [client]) ?? null;
 }
 
-export function useAccessToken(): () => Promise<string | null> {
+export function useAccessTokenProvider(): { get(): Promise<string | null> } {
     const client = useOidcJwtClient();
-    return React.useCallback(() => {
-        if (client) {
-            return client
-                ?.getAccessToken()
-                .then((result) => result?.token ?? null);
-        } else {
-            return Promise.resolve(null);
-        }
+    return React.useMemo(() => {
+        return {
+            get() {
+                if (client) {
+                    return client
+                        .getAccessToken()
+                        .then((result) => result?.token ?? null);
+                } else {
+                    return Promise.resolve(null);
+                }
+            },
+        };
     }, [client]);
 }
