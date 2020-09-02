@@ -7,7 +7,7 @@ interface OidcJwtContextData {
 
 const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
 
-interface OidcJwtProviderProps {
+export interface OidcJwtProviderProps {
     client: OidcJwtClient | OidcJwtClientOptions;
     shouldRequireLogin?: boolean;
     shouldPerformLogin?: boolean;
