@@ -56,9 +56,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
             }
         }
         return () => {
-            if (shouldMonitorAccessTokens) {
-                client.stopMonitoringAccessToken();
-            }
+            client.stopMonitoringAccessToken();
         };
     }, [
         client,
