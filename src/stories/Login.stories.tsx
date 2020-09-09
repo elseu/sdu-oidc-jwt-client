@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { Story, Meta } from "@storybook/react";
 import {
     OidcJwtProvider,
-    useUserInfo,
-    useAccessTokenClaims,
-    useOidcJwtClient,
-    useAccessTokenProvider,
+    useAuthAccessToken,
+    useAuthControls,
+    useAuthAccessClaims,
+    useAuthUserInfo,
 } from "../react-client";
 
 interface TemplateProps {
@@ -16,31 +16,31 @@ interface TemplateProps {
 }
 
 const UserInfo = () => {
-    const info = useUserInfo();
+    const info = useAuthUserInfo();
     return <pre>{JSON.stringify(info, undefined, 4)}</pre>;
 };
 
 const AccessTokenClaims = () => {
-    const info = useAccessTokenClaims();
+    const info = useAuthAccessClaims();
     return <pre>{JSON.stringify(info, undefined, 4)}</pre>;
 };
 
 const Buttons = () => {
     const [token, setToken] = useState<null | string>(null);
-    const claims = useAccessTokenClaims();
-    const client = useOidcJwtClient();
-    const provider = useAccessTokenProvider();
+    const claims = useAuthAccessClaims();
+    const { authorize, logout } = useAuthControls();
+    const fetchAccessToken = useAuthAccessToken();
     const onClickFetchToken = React.useCallback(() => {
-        provider.get().then((token) => {
+        fetchAccessToken().then((token) => {
             setToken(token);
         });
-    }, [provider, setToken]);
+    }, [fetchAccessToken, setToken]);
     const onClickLogout = React.useCallback(() => {
-        client?.logout();
-    }, [client]);
+        logout();
+    }, [logout]);
     const onClickLogin = React.useCallback(() => {
-        client?.authorize();
-    }, [client]);
+        authorize();
+    }, [authorize]);
     return (
         <div>
             {claims && <button onClick={onClickLogout}>Log out</button>}

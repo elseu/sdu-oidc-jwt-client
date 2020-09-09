@@ -14,6 +14,16 @@ export interface OidcJwtProviderProps {
     shouldMonitorAccessTokens?: boolean;
 }
 
+export interface OidcAuthIdentity {
+    accessClaims: Record<string, unknown>;
+    userInfo: Record<string, unknown>;
+}
+
+export interface OidcAuthControls {
+    authorize(params?: Record<string, string>): void;
+    logout(params?: Record<string, string>): void;
+}
+
 function isClientOptions(
     obj: OidcJwtClient | OidcJwtClientOptions
 ): obj is OidcJwtClientOptions {
@@ -94,36 +104,55 @@ export function usePromiseResult<T>(
     return value;
 }
 
-export function useOidcJwtClient(): OidcJwtClient | null {
+function useAuthClient(): OidcJwtClient | null {
     return React.useContext(OidcJwtContext)?.client ?? null;
 }
 
-export function useAccessTokenClaims(): Record<string, unknown> | null {
-    const client = useOidcJwtClient();
-    return (
-        usePromiseResult(() => client?.getAccessToken(), [client])?.claims ??
-        null
-    );
-}
-
-export function useUserInfo(): Record<string, unknown> | null {
-    const client = useOidcJwtClient();
-    return usePromiseResult(() => client?.getUserInfo(), [client]) ?? null;
-}
-
-export function useAccessTokenProvider(): { get(): Promise<string | null> } {
-    const client = useOidcJwtClient();
+export function useAuthControls(): OidcAuthControls {
+    const client = useAuthClient();
     return React.useMemo(() => {
         return {
-            get() {
-                if (client) {
-                    return client
-                        .getAccessToken()
-                        .then((result) => result?.token ?? null);
-                } else {
-                    return Promise.resolve(null);
-                }
+            authorize(params: Record<string, string> = {}) {
+                client?.authorize(params);
             },
+            logout(params: Record<string, string> = {}) {
+                client?.logout(params);
+            },
+        };
+    }, [client]);
+}
+
+export function useAuthUserInfo(): Record<string, unknown> | null {
+    const client = useAuthClient();
+    return usePromiseResult(() => {
+        if (!client) {
+            return null;
+        }
+        return client.getUserInfo();
+    }, [client]);
+}
+
+export function useAuthAccessClaims(): Record<string, unknown> | null {
+    const client = useAuthClient();
+    return usePromiseResult(() => {
+        if (!client) {
+            return null;
+        }
+        return client.getAccessToken().then((info) => info?.claims ?? null);
+    }, [client]);
+}
+
+export function useAuthAccessToken(): { (): Promise<string | null> } {
+    const client = useAuthClient();
+    return React.useMemo(() => {
+        return () => {
+            if (client) {
+                return client
+                    .getAccessToken()
+                    .then((result) => result?.token ?? null);
+            } else {
+                return Promise.resolve(null);
+            }
         };
     }, [client]);
 }
