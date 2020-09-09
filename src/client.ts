@@ -1,5 +1,6 @@
 export interface OidcJwtClientOptions {
     url: string;
+    authorizationDefaults?: Record<string, string>;
 }
 
 interface AccessTokenCache {
@@ -93,11 +94,13 @@ class OidcJwtClientImpl implements OidcJwtClient {
     private csrfTokenStorageKey = "oidc_jwt_provider_token";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private monitorAccessTokenTimeout: any;
+    private authorizationDefaults: Record<string, string>;
 
     constructor(options: OidcJwtClientOptions) {
         this.baseUrl = options.url.replace(/\/$/, "");
         this.csrfToken =
             sessionStorage.getItem(this.csrfTokenStorageKey) ?? null;
+        this.authorizationDefaults = options.authorizationDefaults ?? {};
     }
 
     private fetchJsonWithAuth(url: string): Promise<Record<string, unknown>> {
@@ -131,14 +134,15 @@ class OidcJwtClientImpl implements OidcJwtClient {
     }
 
     authorize(params: Record<string, string> = {}): void {
-        if (!params.redirect_uri) {
-            params.redirect_uri = window.location.href.replace(
+        const queryParams = { ...this.authorizationDefaults, ...params };
+        if (!queryParams.redirect_uri) {
+            queryParams.redirect_uri = window.location.href.replace(
                 /([?&])token=([^&]+)/,
                 "$1"
             );
         }
         window.location.href =
-            this.baseUrl + "/authorize?" + buildQuerystring(params);
+            this.baseUrl + "/authorize?" + buildQuerystring(queryParams);
     }
 
     logout(params: Record<string, string> = {}): void {
@@ -176,7 +180,17 @@ class OidcJwtClientImpl implements OidcJwtClient {
     }
 
     fetchUserInfo(): Promise<Record<string, unknown>> {
-        this.userInfoCache = this.fetchJsonWithAuth(this.baseUrl + "/userinfo");
+        this.userInfoCache = this.fetchJsonWithAuth(
+            this.baseUrl + "/userinfo"
+        ).then((result) => {
+            if (result.status && result.status === "error") {
+                throw new Error(
+                    (result.message as string) ??
+                        "Unknown error fetching userinfo"
+                );
+            }
+            return result;
+        });
         return this.userInfoCache;
     }
 

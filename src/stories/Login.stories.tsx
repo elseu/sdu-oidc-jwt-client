@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Story, Meta } from "@storybook/react";
 import {
     OidcJwtProvider,
@@ -26,12 +26,13 @@ const AccessTokenClaims = () => {
 };
 
 const Buttons = () => {
+    const [token, setToken] = useState<null | string>(null);
     const claims = useAccessTokenClaims();
     const client = useOidcJwtClient();
     const provider = useAccessTokenProvider();
     const onClickFetchToken = React.useCallback(() => {
         provider.get().then((token) => {
-            alert(token);
+            setToken(token);
         });
     }, [provider]);
     const onClickLogout = React.useCallback(() => {
@@ -45,6 +46,12 @@ const Buttons = () => {
             {claims && <button onClick={onClickLogout}>Log out</button>}
             {claims && <button onClick={onClickFetchToken}>Fetch token</button>}
             {!claims && <button onClick={onClickLogin}>Log in</button>}
+            {token && (
+                <>
+                    <h2>Token</h2>
+                    <textarea>{token}</textarea>
+                </>
+            )}
         </div>
     );
 };
@@ -58,7 +65,10 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
     } = props;
     return (
         <OidcJwtProvider
-            client={{ url }}
+            client={{
+                url,
+                authorizationDefaults: { scope: "openid profile taxvice" }
+            }}
             shouldRequireLogin={shouldRequireLogin}
             shouldPerformLogin={shouldPerformLogin}
             shouldMonitorAccessTokens={shouldMonitorAccessTokens}
