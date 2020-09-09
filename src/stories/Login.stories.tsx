@@ -11,7 +11,7 @@ import {
 interface TemplateProps {
     url: string;
     shouldRequireLogin: boolean;
-    shouldPerformLogin: boolean;
+    shouldAttemptLogin: boolean;
     shouldMonitorAccessTokens: boolean;
 }
 
@@ -60,7 +60,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
     const {
         url,
         shouldRequireLogin = false,
-        shouldPerformLogin = false,
+        shouldAttemptLogin = false,
         shouldMonitorAccessTokens = false,
     } = props;
     return (
@@ -70,7 +70,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
                 authorizationDefaults: { scope: "openid profile taxvice" },
             }}
             shouldRequireLogin={shouldRequireLogin}
-            shouldPerformLogin={shouldPerformLogin}
+            shouldAttemptLogin={shouldAttemptLogin}
             shouldMonitorAccessTokens={shouldMonitorAccessTokens}
         >
             <Buttons />
@@ -87,7 +87,7 @@ export const Login = Template.bind({});
 Login.args = {
     url: "http://localhost:3000",
     shouldRequireLogin: false,
-    shouldPerformLogin: true,
+    shouldAttemptLogin: true,
     shouldMonitorAccessTokens: true,
 };
 

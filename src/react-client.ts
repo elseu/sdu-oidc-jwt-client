@@ -10,7 +10,7 @@ const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
 export interface OidcJwtProviderProps {
     client: OidcJwtClient | OidcJwtClientOptions;
     shouldRequireLogin?: boolean;
-    shouldPerformLogin?: boolean;
+    shouldAttemptLogin?: boolean;
     shouldMonitorAccessTokens?: boolean;
 }
 
@@ -34,7 +34,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     const {
         client: clientProp,
         shouldRequireLogin = false,
-        shouldPerformLogin = false,
+        shouldAttemptLogin = false,
         shouldMonitorAccessTokens = true,
         children,
     } = props;
@@ -57,7 +57,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
                 client.monitorAccessToken();
             }
         } else {
-            if (shouldPerformLogin) {
+            if (shouldAttemptLogin) {
                 const params: Record<string, string> = {};
                 if (!shouldRequireLogin) {
                     params.prompt = "none";
@@ -71,7 +71,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     }, [
         client,
         shouldMonitorAccessTokens,
-        shouldPerformLogin,
+        shouldAttemptLogin,
         shouldRequireLogin,
     ]);
     React.useEffect(() => {
