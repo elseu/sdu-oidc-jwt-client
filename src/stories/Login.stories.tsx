@@ -34,7 +34,7 @@ const Buttons = () => {
         provider.get().then((token) => {
             setToken(token);
         });
-    }, [provider]);
+    }, [provider, setToken]);
     const onClickLogout = React.useCallback(() => {
         client?.logout();
     }, [client]);
@@ -49,7 +49,7 @@ const Buttons = () => {
             {token && (
                 <>
                     <h2>Token</h2>
-                    <textarea>{token}</textarea>
+                    <textarea value={token}></textarea>
                 </>
             )}
         </div>
@@ -67,7 +67,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
         <OidcJwtProvider
             client={{
                 url,
-                authorizationDefaults: { scope: "openid profile taxvice" }
+                authorizationDefaults: { scope: "openid profile taxvice" },
             }}
             shouldRequireLogin={shouldRequireLogin}
             shouldPerformLogin={shouldPerformLogin}
