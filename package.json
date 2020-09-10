@@ -1,6 +1,6 @@
 {
   "name": "oidc-jwt-client",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Fetch JWTs for API access from oidc-jwt-provider",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
