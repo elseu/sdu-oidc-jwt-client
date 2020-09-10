@@ -1,5 +1,5 @@
 {
-  "name": "oidc-jwt-provider-client",
+  "name": "oidc-jwt-client",
   "version": "0.1.0",
   "description": "Fetch JWTs for API access from oidc-jwt-provider",
   "main": "dist/index.js",
@@ -11,9 +11,11 @@
   "scripts": {
     "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "lint": "eslint . --ext .ts",
-    "build": "rimraf dist; rollup -c; rimraf \"dist/*.stories.d.ts\"",
+    "build": "rimraf dist; rollup -c; rimraf \"dist/**/*.stories.d.ts\"; rimraf \"dist/stories\"",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "prepublishOnly": "npm run build",
+    "deploy": "semantic-release"
   },
   "author": "Sebastiaan Besselsen <s.besselsen@sdu.nl>",
   "license": "MIT",
@@ -41,6 +43,7 @@
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-peer-deps-external": "^2.2.3",
     "rollup-plugin-typescript2": "^0.27.2",
+    "semantic-release": "^17.1.1",
     "typescript": "^4.0.2"
   },
   "peerDependencies": {
