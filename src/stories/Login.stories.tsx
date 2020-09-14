@@ -24,10 +24,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
     } = props;
     return (
         <OidcJwtProvider
-            client={{
-                url,
-                authorizationDefaults: { scope: "openid profile taxvice" },
-            }}
+            client={{ url }}
             shouldRequireLogin={shouldRequireLogin}
             shouldAttemptLogin={shouldAttemptLogin}
             shouldMonitorAccessTokens={shouldMonitorAccessTokens}
