@@ -13,6 +13,7 @@ interface TemplateProps {
     shouldRequireLogin: boolean;
     shouldAttemptLogin: boolean;
     shouldMonitorAccessTokens: boolean;
+    testApiUrl?: string;
 }
 
 const Template: Story<TemplateProps> = (props: TemplateProps) => {
@@ -21,6 +22,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
         shouldRequireLogin = false,
         shouldAttemptLogin = false,
         shouldMonitorAccessTokens = false,
+        testApiUrl,
     } = props;
     return (
         <OidcJwtProvider
@@ -29,14 +31,20 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
             shouldAttemptLogin={shouldAttemptLogin}
             shouldMonitorAccessTokens={shouldMonitorAccessTokens}
         >
-            <Content />
+            <Content testApiUrl={testApiUrl} />
         </OidcJwtProvider>
     );
 };
 
-const Content = () => {
+interface ContentProps {
+    testApiUrl?: string;
+}
+
+const Content = (props: ContentProps) => {
+    const { testApiUrl } = props;
     const userInfo = useAuthUserInfo();
     const [token, setToken] = useState<null | string>(null);
+    const [apiResult, setApiResult] = useState<null | string>(null);
     const claims = useAuthAccessClaims();
     const { authorize, logout } = useAuthControls();
     const fetchAccessToken = useAuthAccessToken();
@@ -45,6 +53,24 @@ const Content = () => {
             setToken(token);
         });
     }, [fetchAccessToken, setToken]);
+    const onClickCallApi = React.useCallback(() => {
+        fetchAccessToken().then((token) => {
+            if (!token) {
+                alert("No token!");
+                setApiResult(null);
+            } else {
+                fetch(testApiUrl, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                })
+                    .then((response) => response.json())
+                    .then((json) => {
+                        setApiResult(JSON.stringify(json, undefined, 4));
+                    });
+            }
+        });
+    }, [setApiResult, testApiUrl]);
     const onClickLogout = React.useCallback(() => {
         logout();
     }, [logout]);
@@ -58,26 +84,52 @@ const Content = () => {
                 {claims && (
                     <button onClick={onClickFetchToken}>Fetch token</button>
                 )}
+                {claims && testApiUrl && (
+                    <button onClick={onClickCallApi}>Call API</button>
+                )}
                 {!claims && <button onClick={onClickLogin}>Log in</button>}
                 {token && (
                     <>
                         <h2>Token</h2>
-                        <textarea value={token}></textarea>
+                        <LargeTextArea value={token}></LargeTextArea>
+                    </>
+                )}
+                {apiResult && (
+                    <>
+                        <h2>API result</h2>
+                        <LargeTextArea value={apiResult}></LargeTextArea>
                     </>
                 )}
             </div>
             <hr />
             <h1>User info</h1>
-            <pre>{JSON.stringify(userInfo, undefined, 4)}</pre>
+            <LargeTextArea
+                value={JSON.stringify(userInfo, undefined, 4)}
+            ></LargeTextArea>
             <h1>Access token claims</h1>
-            <pre>{JSON.stringify(claims, undefined, 4)}</pre>
+            <LargeTextArea
+                value={JSON.stringify(claims, undefined, 4)}
+            ></LargeTextArea>
         </>
+    );
+};
+
+interface LargeTextAreaProps {
+    value: string;
+}
+const LargeTextArea = (props: LargeTextAreaProps) => {
+    return (
+        <textarea
+            style={{ height: "250px", width: "100%" }}
+            value={props.value}
+        ></textarea>
     );
 };
 
 export const Login = Template.bind({});
 Login.args = {
-    url: "http://localhost:3000",
+    url: "https://api-auth.acc.titan.awssdu.nl",
+    testApiUrl: "https://api-auth-test.acc.titan.awssdu.nl",
     shouldRequireLogin: false,
     shouldAttemptLogin: true,
     shouldMonitorAccessTokens: true,
