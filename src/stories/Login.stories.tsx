@@ -54,6 +54,11 @@ const Content = (props: ContentProps) => {
         });
     }, [fetchAccessToken, setToken]);
     const onClickCallApi = React.useCallback(() => {
+        if (!testApiUrl) {
+            alert("No API url");
+            setApiResult(null);
+            return;
+        }
         fetchAccessToken().then((token) => {
             if (!token) {
                 alert("No token!");

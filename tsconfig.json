@@ -3,6 +3,7 @@
         "jsx": "react",
         "target": "es5",
         "module": "esnext",
+        "moduleResolution": "node",
         "lib": ["dom", "esnext"],
         "declaration": true,
         "outDir": "dist",
