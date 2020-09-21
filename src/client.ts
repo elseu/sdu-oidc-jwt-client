@@ -43,7 +43,7 @@ export interface OidcJwtClient {
    * Check if we have a session token.
    * @returns True if we have a session token, false otherwise.
    */
-  haveSessionToken(): boolean;
+  hasSessionToken(): boolean;
 
   /**
    * Fetch a fresh access token.
@@ -98,8 +98,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
   constructor(options: OidcJwtClientOptions) {
     this.baseUrl = options.url.replace(/\/$/, '');
-    this.csrfToken =
-      sessionStorage.getItem(this.csrfTokenStorageKey) ?? null;
+    this.csrfToken = sessionStorage.getItem(this.csrfTokenStorageKey) ?? null;
     this.authorizationDefaults = options.authorizationDefaults ?? {};
   }
 
@@ -116,14 +115,14 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
   receiveSessionToken(redirect = true): boolean {
     const match = window.location.search.match(/[?&]token=([^&]+)/);
-    if (match) {
-      this.setSessionToken(match[1]);
-      if (redirect || typeof redirect === 'undefined') {
-        window.location.href = window.location.href
-          .replace(/([?&])token=([^&]+)/, '$1')
-          .replace(/\?$/, '');
-        return true;
-      }
+    if (!match) return false;
+
+    this.setSessionToken(match[1]);
+    if (redirect || typeof redirect === 'undefined') {
+      window.location.href = window.location.href
+        .replace(/([?&])token=([^&]+)/, '$1')
+        .replace(/\?$/, '');
+      return true;
     }
     return false;
   }
@@ -141,19 +140,17 @@ class OidcJwtClientImpl implements OidcJwtClient {
         '$1',
       );
     }
-    window.location.href =
-      this.baseUrl + '/authorize?' + buildQuerystring(queryParams);
+    window.location.href = this.baseUrl + '/authorize?' + buildQuerystring(queryParams);
   }
 
   logout(params: Record<string, string> = {}): void {
     if (!params.post_logout_redirect_uri) {
       params.post_logout_redirect_uri = window.location.href;
     }
-    window.location.href =
-      this.baseUrl + '/logout?' + buildQuerystring(params);
+    window.location.href = this.baseUrl + '/logout?' + buildQuerystring(params);
   }
 
-  haveSessionToken(): boolean {
+  hasSessionToken(): boolean {
     return !!this.csrfToken;
   }
 
@@ -184,10 +181,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
       this.baseUrl + '/userinfo',
     ).then((result) => {
       if (result.status && result.status === 'error') {
-        throw new Error(
-          (result.message as string) ??
-          'Unknown error fetching userinfo',
-        );
+        throw new Error((result.message as string) ?? 'Unknown error fetching userinfo');
       }
       return result;
     });

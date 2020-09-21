@@ -51,12 +51,12 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   React.useEffect(() => {
     if (client.receiveSessionToken()) {
-
+      // Todo
     }
   }, [client]);
 
   React.useEffect(() => {
-    if (client.haveSessionToken()) {
+    if (client.hasSessionToken()) {
       if (shouldMonitorAccessTokens) {
         client.monitorAccessToken();
       }
@@ -115,24 +115,20 @@ function useAuthClient(): OidcJwtClient | null {
 
 export function useAuthControls(): OidcAuthControls {
   const client = useAuthClient();
-  return React.useMemo(() => {
-    return {
-      authorize(params: Record<string, string> = {}) {
-        client?.authorize(params);
-      },
-      logout(params: Record<string, string> = {}) {
-        client?.logout(params);
-      },
-    };
-  }, [client]);
+  return React.useMemo(() => ({
+    authorize(params: Record<string, string> = {}) {
+      client?.authorize(params);
+    },
+    logout(params: Record<string, string> = {}) {
+      client?.logout(params);
+    },
+  }), [client]);
 }
 
 export function useAuthUserInfo(): Record<string, unknown> | null {
   const client = useAuthClient();
   return usePromiseResult(() => {
-    if (!client) {
-      return null;
-    }
+    if (!client) return null;
     return client.getUserInfo();
   }, [client]);
 }
@@ -140,9 +136,7 @@ export function useAuthUserInfo(): Record<string, unknown> | null {
 export function useAuthAccessClaims(): Record<string, unknown> | null {
   const client = useAuthClient();
   return usePromiseResult(() => {
-    if (!client) {
-      return null;
-    }
+    if (!client) return null;
     return client.getAccessToken().then((info) => info?.claims ?? null);
   }, [client]);
 }
@@ -151,13 +145,10 @@ export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
   return React.useMemo(() => {
     return () => {
-      if (client) {
-        return client
-          .getAccessToken()
-          .then((result) => result?.token ?? null);
-      } else {
-        return Promise.resolve(null);
-      }
+      if (!client) return Promise.resolve(null);
+      return client
+        .getAccessToken()
+        .then((result) => result?.token ?? null);
     };
   }, [client]);
 }
