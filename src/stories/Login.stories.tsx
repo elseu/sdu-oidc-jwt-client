@@ -79,7 +79,7 @@ const Content = (props: ContentProps) => {
           setApiResult(JSON.stringify(json, undefined, 4));
         });
     });
-  }, [setApiResult, testApiUrl]);
+  }, [fetchAccessToken, testApiUrl]);
 
   const onClickLogout = React.useCallback(() => {
     logout();

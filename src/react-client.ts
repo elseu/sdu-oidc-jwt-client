@@ -103,6 +103,7 @@ export function usePromiseResult<T>(
     f()?.then((result) => {
       setValue(result);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return value;
 }
