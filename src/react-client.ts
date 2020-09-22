@@ -50,9 +50,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const { client } = contextValue;
 
   React.useEffect(() => {
-    if (client.receiveSessionToken()) {
-      // Todo
-    }
+    client.receiveSessionToken();
   }, [client]);
 
   React.useEffect(() => {
