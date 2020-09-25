@@ -65,3 +65,11 @@ To get the claims you can do this within the context of the provider:
 const claims = useAuthAccessClaims();
 console.log('This are the claims: ', claims)
 ```
+
+### Check session 
+To check if there is a session and for example show a loader when there's not yet one:
+
+```javascript
+const hasSession = useAuthSession();
+console.log('There is a session started: ', hasSession)
+```
