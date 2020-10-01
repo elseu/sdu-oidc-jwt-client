@@ -86,6 +86,10 @@ function buildQuerystring(params: Record<string, string>): string {
     .join('&');
 }
 
+function stripTokenFromUrl(url: string): string {
+  return url.replace(/([?&])token=([^&#]+)/, '$1');
+}
+
 class OidcJwtClientImpl implements OidcJwtClient {
   private accessTokenCache: Promise<AccessTokenCache> | undefined;
   private userInfoCache: Promise<Record<string, unknown>> | undefined;
@@ -119,9 +123,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
     this.setSessionToken(match[1]);
     if (redirect || typeof redirect === 'undefined') {
-      window.location.href = window.location.href
-        .replace(/([?&])token=([^&]+)/, '$1')
-        .replace(/\?$/, '');
+      window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '');
       return true;
     }
     return false;
@@ -135,10 +137,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
   authorize(params: Record<string, string> = {}): void {
     const queryParams = { ...this.authorizationDefaults, ...params };
     if (!queryParams.redirect_uri) {
-      queryParams.redirect_uri = window.location.href.replace(
-        /([?&])token=([^&]+)/,
-        '$1',
-      );
+      queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
     }
     window.location.href = this.baseUrl + '/authorize?' + buildQuerystring(queryParams);
   }
