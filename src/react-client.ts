@@ -124,11 +124,11 @@ export function useAuthControls(): OidcAuthControls {
   }), [client]);
 }
 
-export function useAuthUserInfo(): Record<string, unknown> | null {
+export function useAuthUserInfo<T>(): T | null {
   const client = useAuthClient();
   return usePromiseResult(() => {
     if (!client) return null;
-    return client.getUserInfo();
+    return client.getUserInfo<T>();
   }, [client]);
 }
 

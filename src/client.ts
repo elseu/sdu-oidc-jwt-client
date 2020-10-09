@@ -13,6 +13,17 @@ interface AccessTokenInfo {
   claims: Record<string, unknown> | null;
 }
 
+export interface UserInfo {
+  cn: string
+  email: string
+  givenName: string
+  login: string
+  name:string
+  sn: string
+  sub: string
+  updated_at: number
+}
+
 export interface OidcJwtClient {
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
@@ -55,7 +66,7 @@ export interface OidcJwtClient {
    * Fetch fresh user info.
    * @returns A promise of the user info.
    */
-  fetchUserInfo(): Promise<Record<string, unknown>>;
+  fetchUserInfo(): Promise<UserInfo | null>;
 
   /**
    * Monitor our access token and keep it up-to-date, so getAccessToken() is always fast.
@@ -77,7 +88,7 @@ export interface OidcJwtClient {
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-  getUserInfo(): Promise<Record<string, unknown>>;
+  getUserInfo<T>(): Promise<T>;
 }
 
 function buildQuerystring(params: Record<string, string>): string {
@@ -92,7 +103,7 @@ function stripTokenFromUrl(url: string): string {
 
 class OidcJwtClientImpl implements OidcJwtClient {
   private accessTokenCache: Promise<AccessTokenCache> | undefined;
-  private userInfoCache: Promise<Record<string, unknown>> | undefined;
+  private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
   private csrfTokenStorageKey = 'oidc_jwt_provider_token';
@@ -106,7 +117,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
     this.authorizationDefaults = options.authorizationDefaults ?? {};
   }
 
-  private fetchJsonWithAuth(url: string): Promise<Record<string, unknown>> {
+  private fetchJsonWithAuth(url: string) {
     return fetch(url, {
       headers: {
         Authorization: 'Bearer ' + this.csrfToken,
@@ -175,16 +186,16 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return this.accessTokenCache.then((result) => result.value);
   }
 
-  fetchUserInfo(): Promise<Record<string, unknown>> {
+  fetchUserInfo<T>(): Promise<T> {
     this.userInfoCache = this.fetchJsonWithAuth(
       this.baseUrl + '/userinfo',
     ).then((result) => {
       if (result.status && result.status === 'error') {
         throw new Error((result.message as string) ?? 'Unknown error fetching userinfo');
       }
-      return result;
+      return result as UserInfo;
     });
-    return this.userInfoCache;
+    return this.userInfoCache as Promise<T>;
   }
 
   monitorAccessToken(): void {
@@ -229,11 +240,11 @@ class OidcJwtClientImpl implements OidcJwtClient {
     });
   }
 
-  getUserInfo(): Promise<Record<string, unknown>> {
+  getUserInfo<T>(): Promise<T> {
     if (this.userInfoCache) {
       return this.userInfoCache;
     }
-    return this.fetchUserInfo();
+    return this.fetchUserInfo<T>();
   }
 }
 
