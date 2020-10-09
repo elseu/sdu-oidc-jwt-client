@@ -3,25 +3,19 @@ export interface OidcJwtClientOptions {
   authorizationDefaults?: Record<string, string>;
 }
 
-interface AccessTokenCache {
-  value: AccessTokenInfo;
+interface AccessTokenCache<T extends ClaimsBase> {
+  value: AccessTokenInfo<T>;
   validUntil: number | null;
 }
 
-interface AccessTokenInfo {
+export interface AccessTokenInfo<T extends ClaimsBase> {
   token: string | null;
-  claims: Record<string, unknown> | null;
+  claims: T | null;
 }
 
-export interface UserInfo {
-  cn: string
-  email: string
-  givenName: string
-  login: string
-  name:string
-  sn: string
-  sub: string
-  updated_at: number
+export interface ClaimsBase {
+  iat: number
+  exp: number
 }
 
 export interface OidcJwtClient {
@@ -60,13 +54,13 @@ export interface OidcJwtClient {
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
-  fetchAccessToken(): Promise<AccessTokenInfo>;
+  fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>>;
 
   /**
    * Fetch fresh user info.
    * @returns A promise of the user info.
    */
-  fetchUserInfo(): Promise<UserInfo | null>;
+  fetchUserInfo<T>(): Promise<T | null>;
 
   /**
    * Monitor our access token and keep it up-to-date, so getAccessToken() is always fast.
@@ -82,7 +76,7 @@ export interface OidcJwtClient {
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
    * @returns Promise of access token info, or null.
    */
-  getAccessToken(): Promise<AccessTokenInfo | null>;
+  getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
@@ -102,7 +96,7 @@ function stripTokenFromUrl(url: string): string {
 }
 
 class OidcJwtClientImpl implements OidcJwtClient {
-  private accessTokenCache: Promise<AccessTokenCache> | undefined;
+  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined;
   private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
@@ -164,11 +158,11 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return !!this.csrfToken;
   }
 
-  fetchAccessToken(): Promise<AccessTokenInfo> {
+  fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
     const fetchedAt = new Date().getTime();
     this.accessTokenCache = ((this.fetchJsonWithAuth(
       this.baseUrl + '/token',
-    ) as unknown) as Promise<AccessTokenInfo>).then((result) => {
+    ) as unknown) as Promise<AccessTokenInfo<T>>).then((result) => {
       if (!result.token) {
         return { value: result, validUntil: null };
       }
@@ -193,7 +187,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
       if (result.status && result.status === 'error') {
         throw new Error((result.message as string) ?? 'Unknown error fetching userinfo');
       }
-      return result as UserInfo;
+      return result as T;
     });
     return this.userInfoCache as Promise<T>;
   }
@@ -227,9 +221,9 @@ class OidcJwtClientImpl implements OidcJwtClient {
     }
   }
 
-  getAccessToken(): Promise<AccessTokenInfo | null> {
+  getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null> {
     if (!this.accessTokenCache) {
-      return this.fetchAccessToken();
+      return this.fetchAccessToken<T>();
     }
     return this.accessTokenCache.then((cache) => {
       const now = new Date().getTime();

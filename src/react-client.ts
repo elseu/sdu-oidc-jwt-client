@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { OidcJwtClient, oidcJwtClient, OidcJwtClientOptions } from './client';
+import { ClaimsBase, OidcJwtClient, oidcJwtClient, OidcJwtClientOptions } from './client';
 
 interface OidcJwtContextData {
   client: OidcJwtClient;
@@ -95,7 +95,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 };
 
 export function usePromiseResult<T>(
-  f: () => Promise<T> | null | undefined,
+  f: () => Promise<T> | null,
   deps: unknown[],
 ): T | null {
   const [value, setValue] = React.useState<T | null>(null);
@@ -126,17 +126,17 @@ export function useAuthControls(): OidcAuthControls {
 
 export function useAuthUserInfo<T>(): T | null {
   const client = useAuthClient();
-  return usePromiseResult(() => {
+  return usePromiseResult<T>(() => {
     if (!client) return null;
     return client.getUserInfo<T>();
   }, [client]);
 }
 
-export function useAuthAccessClaims(): Record<string, unknown> | null {
+export function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
   const client = useAuthClient();
-  return usePromiseResult(() => {
+  return usePromiseResult<T>(() => {
     if (!client) return null;
-    return client.getAccessToken().then((info) => info?.claims ?? null);
+    return client.getAccessToken<T>().then<T>((info) => info?.claims as T ?? null);
   }, [client]);
 }
 
