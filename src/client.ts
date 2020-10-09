@@ -8,7 +8,7 @@ interface AccessTokenCache<T extends ClaimsBase> {
   validUntil: number | null;
 }
 
-export interface AccessTokenInfo<T extends ClaimsBase> {
+interface AccessTokenInfo<T extends ClaimsBase> {
   token: string | null;
   claims: T | null;
 }
