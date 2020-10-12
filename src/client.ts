@@ -111,13 +111,13 @@ class OidcJwtClientImpl implements OidcJwtClient {
     this.authorizationDefaults = options.authorizationDefaults ?? {};
   }
 
-  private fetchJsonWithAuth(url: string) {
+  private fetchJsonWithAuth(url: string): Promise<Record<string, unknown>> {
     return fetch(url, {
       headers: {
         Authorization: 'Bearer ' + this.csrfToken,
       },
       credentials: 'include',
-    }).then((response) => {
+    }).then<Record<string, unknown>>((response) => {
       return response.json();
     });
   }
