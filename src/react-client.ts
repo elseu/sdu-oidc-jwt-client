@@ -140,10 +140,10 @@ export function useAuthAccessClaims(): Record<string, unknown> | null {
   }, [client]);
 }
 
-export function useAuthSession(): boolean | null {
+export function useAuthSessionInfo(): { hasSession: boolean } | null {
   const client = useAuthClient();
   if (!client) return null;
-  return client.hasSessionToken();
+  return { hasSession: client.hasSessionToken() };
 }
 
 export function useAuthAccessToken(): { (): Promise<string | null> } {

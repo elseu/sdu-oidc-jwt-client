@@ -70,6 +70,6 @@ console.log('This are the claims: ', claims)
 To check if there is a session and for example show a loader when there's not yet one:
 
 ```javascript
-const hasSession = useAuthSession();
-console.log('There is a session started: ', hasSession)
+const sessionInfo = useAuthSessionInfo();
+console.log('There is a session started: ', sessionInfo.hasSession)
 ```
