@@ -41,12 +41,54 @@ interface ContentProps {
   testApiUrl?: string;
 }
 
+interface UserInfo {
+  cn: string
+  email: string
+  givenName: string
+  login: string
+  name:string
+  sn: string
+  sub: string
+  updated_at: number
+}
+
+interface Orig {
+  iss: string;
+  aud: string;
+  nbf: number;
+  exp: number;
+}
+
+interface Claims {
+  iss: string;
+  aud: string;
+  orig: Orig;
+  scope: string[];
+  anon: boolean;
+  sub: string;
+  role: string;
+  amr: string;
+  givenName: string;
+  MFA: boolean;
+  externalId: string;
+  cn: string;
+  login: string;
+  sid: string;
+  idp: string;
+  updated_at: string;
+  auth_time: number;
+  sn: string;
+  email: string;
+  iat: number;
+  exp: number;
+}
+
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
-  const userInfo = useAuthUserInfo();
+  const userInfo = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
-  const claims = useAuthAccessClaims();
+  const claims = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
 

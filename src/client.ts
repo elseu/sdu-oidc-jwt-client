@@ -3,14 +3,19 @@ export interface OidcJwtClientOptions {
   authorizationDefaults?: Record<string, string>;
 }
 
-interface AccessTokenCache {
-  value: AccessTokenInfo;
+interface AccessTokenCache<T extends ClaimsBase> {
+  value: AccessTokenInfo<T>;
   validUntil: number | null;
 }
 
-interface AccessTokenInfo {
+interface AccessTokenInfo<T extends ClaimsBase> {
   token: string | null;
-  claims: Record<string, unknown> | null;
+  claims: T | null;
+}
+
+export interface ClaimsBase {
+  iat: number
+  exp: number
 }
 
 export interface OidcJwtClient {
@@ -49,13 +54,13 @@ export interface OidcJwtClient {
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
-  fetchAccessToken(): Promise<AccessTokenInfo>;
+  fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>>;
 
   /**
    * Fetch fresh user info.
    * @returns A promise of the user info.
    */
-  fetchUserInfo(): Promise<Record<string, unknown>>;
+  fetchUserInfo<T>(): Promise<T | null>;
 
   /**
    * Monitor our access token and keep it up-to-date, so getAccessToken() is always fast.
@@ -71,13 +76,13 @@ export interface OidcJwtClient {
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
    * @returns Promise of access token info, or null.
    */
-  getAccessToken(): Promise<AccessTokenInfo | null>;
+  getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-  getUserInfo(): Promise<Record<string, unknown>>;
+  getUserInfo<T>(): Promise<T>;
 }
 
 function buildQuerystring(params: Record<string, string>): string {
@@ -91,13 +96,13 @@ function stripTokenFromUrl(url: string): string {
 }
 
 class OidcJwtClientImpl implements OidcJwtClient {
-  private accessTokenCache: Promise<AccessTokenCache> | undefined;
-  private userInfoCache: Promise<Record<string, unknown>> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined;
+  private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
   private csrfTokenStorageKey = 'oidc_jwt_provider_token';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private monitorAccessTokenTimeout: any;
+  private monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null = null;
   private authorizationDefaults: Record<string, string>;
 
   constructor(options: OidcJwtClientOptions) {
@@ -112,7 +117,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
         Authorization: 'Bearer ' + this.csrfToken,
       },
       credentials: 'include',
-    }).then((response) => {
+    }).then<Record<string, unknown>>((response) => {
       return response.json();
     });
   }
@@ -153,11 +158,11 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return !!this.csrfToken;
   }
 
-  fetchAccessToken(): Promise<AccessTokenInfo> {
+  fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
     const fetchedAt = new Date().getTime();
     this.accessTokenCache = ((this.fetchJsonWithAuth(
       this.baseUrl + '/token',
-    ) as unknown) as Promise<AccessTokenInfo>).then((result) => {
+    ) as unknown) as Promise<AccessTokenInfo<T>>).then((result) => {
       if (!result.token) {
         return { value: result, validUntil: null };
       }
@@ -175,16 +180,16 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return this.accessTokenCache.then((result) => result.value);
   }
 
-  fetchUserInfo(): Promise<Record<string, unknown>> {
+  fetchUserInfo<T>(): Promise<T> {
     this.userInfoCache = this.fetchJsonWithAuth(
       this.baseUrl + '/userinfo',
     ).then((result) => {
       if (result.status && result.status === 'error') {
         throw new Error((result.message as string) ?? 'Unknown error fetching userinfo');
       }
-      return result;
+      return result as T;
     });
-    return this.userInfoCache;
+    return this.userInfoCache as Promise<T>;
   }
 
   monitorAccessToken(): void {
@@ -216,9 +221,9 @@ class OidcJwtClientImpl implements OidcJwtClient {
     }
   }
 
-  getAccessToken(): Promise<AccessTokenInfo | null> {
+  getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null> {
     if (!this.accessTokenCache) {
-      return this.fetchAccessToken();
+      return this.fetchAccessToken<T>();
     }
     return this.accessTokenCache.then((cache) => {
       const now = new Date().getTime();
@@ -229,11 +234,11 @@ class OidcJwtClientImpl implements OidcJwtClient {
     });
   }
 
-  getUserInfo(): Promise<Record<string, unknown>> {
+  getUserInfo<T>(): Promise<T> {
     if (this.userInfoCache) {
       return this.userInfoCache;
     }
-    return this.fetchUserInfo();
+    return this.fetchUserInfo<T>();
   }
 }
 
