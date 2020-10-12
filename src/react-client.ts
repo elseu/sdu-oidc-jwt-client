@@ -140,6 +140,12 @@ export function useAuthAccessClaims(): Record<string, unknown> | null {
   }, [client]);
 }
 
+export function useAuthSessionInfo(): { hasSession: boolean } | null {
+  const client = useAuthClient();
+  if (!client) return null;
+  return { hasSession: client.hasSessionToken() };
+}
+
 export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
   return React.useMemo(() => {
