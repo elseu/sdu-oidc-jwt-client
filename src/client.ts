@@ -96,13 +96,13 @@ function stripTokenFromUrl(url: string): string {
 }
 
 class OidcJwtClientImpl implements OidcJwtClient {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private accessTokenCache: Promise<AccessTokenCache<any>> | undefined;
   private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
   private csrfTokenStorageKey = 'oidc_jwt_provider_token';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private monitorAccessTokenTimeout: any;
+  private monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null = null;
   private authorizationDefaults: Record<string, string>;
 
   constructor(options: OidcJwtClientOptions) {
