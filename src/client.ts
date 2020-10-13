@@ -1,3 +1,4 @@
+import queryString from 'query-string';
 export interface OidcJwtClientOptions {
   url: string;
   authorizationDefaults?: Record<string, string>;
@@ -91,8 +92,12 @@ function buildQuerystring(params: Record<string, string>): string {
     .join('&');
 }
 
-function stripTokenFromUrl(url: string): string {
-  return url.replace(/([?&])token=([^&#]+)/, '$1');
+function stripTokenFromUrl(href: string): string {
+  //= > {url: 'https://foo.bar', query: {foo: 'bar'}}
+  const parsedUrl = queryString.parseUrl(href, { parseFragmentIdentifier: true });
+  const { url, query, fragmentIdentifier } = parsedUrl;
+  const { token, ...params } = query;
+  return queryString.stringifyUrl({ url, query: params, fragmentIdentifier });
 }
 
 class OidcJwtClientImpl implements OidcJwtClient {
