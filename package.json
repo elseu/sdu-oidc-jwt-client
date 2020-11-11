@@ -89,5 +89,10 @@
       "pre-push": "npm run type-check"
     }
   },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
   "dependencies": {}
 }
