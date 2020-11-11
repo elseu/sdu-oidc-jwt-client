@@ -199,7 +199,6 @@ class OidcJwtClientImpl implements OidcJwtClient {
   }
 
   monitorAccessToken(): void {
-    let retries = 0;
     const updateToken = () => {
       this.fetchAccessToken();
       this.accessTokenCache?.then((cache) => {
@@ -216,10 +215,6 @@ class OidcJwtClientImpl implements OidcJwtClient {
             updateToken,
             timeoutMs,
           );
-        } else {
-          if (retries >= 1) return;
-          retries++;
-          this.authorize({ prompt: 'none' });
         }
       });
     };
