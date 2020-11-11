@@ -102,7 +102,7 @@ function stripTokenFromUrl(href: string): string {
 
 class OidcJwtClientImpl implements OidcJwtClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined;
+  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined | null;
   private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
@@ -237,12 +237,18 @@ class OidcJwtClientImpl implements OidcJwtClient {
     if (!this.accessTokenCache) {
       return this.fetchAccessToken<T>();
     }
+    const currentAccessTokenCache = this.accessTokenCache;
     return this.accessTokenCache.then((cache) => {
       const now = new Date().getTime();
       if (cache.validUntil && cache.validUntil > now) {
         return cache.value;
       }
-      return this.fetchAccessToken();
+      // Cache is no longer valid; go again.
+      if (this.accessTokenCache === currentAccessTokenCache) {
+        // Remove the cache, but only if it hasn't already been removed and recreated by someone else.
+        this.accessTokenCache = null;
+      }
+      return this.getAccessToken();
     });
   }
 
