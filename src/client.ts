@@ -112,7 +112,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
   constructor(options: OidcJwtClientOptions) {
     this.baseUrl = options.url.replace(/\/$/, '');
-    this.csrfToken = sessionStorage.getItem(this.csrfTokenStorageKey) ?? null;
+    this.csrfToken = localStorage.getItem(this.csrfTokenStorageKey) ?? null;
     this.authorizationDefaults = options.authorizationDefaults ?? {};
   }
 
@@ -133,7 +133,8 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
     this.setSessionToken(match[1]);
     if (redirect || typeof redirect === 'undefined') {
-      window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '');
+      // TODO: Still need to figure out why #. is appearing in url
+      window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace('#.', '');
       return true;
     }
     return false;
@@ -141,7 +142,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
   setSessionToken(token: string): void {
     this.csrfToken = token;
-    sessionStorage.setItem(this.csrfTokenStorageKey, this.csrfToken);
+    localStorage.setItem(this.csrfTokenStorageKey, this.csrfToken);
   }
 
   authorize(params: Record<string, string> = {}): void {
@@ -198,6 +199,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
   }
 
   monitorAccessToken(): void {
+    let retries = 0;
     const updateToken = () => {
       this.fetchAccessToken();
       this.accessTokenCache?.then((cache) => {
@@ -214,6 +216,10 @@ class OidcJwtClientImpl implements OidcJwtClient {
             updateToken,
             timeoutMs,
           );
+        } else {
+          if (retries >= 1) return;
+          retries++;
+          this.authorize({ prompt: 'none' });
         }
       });
     };
