@@ -8,7 +8,6 @@ Fetch JWTs for API access from oidc-jwt-provider
 ```javascript
 <OidcJwtProvider
   client={{ url: 'https://api-auth.acc.titan.awssdu.nl' }}
-  shouldRequireLogin={false}
   shouldAttemptLogin={false}
   shouldMonitorAccessTokens={false}
 >
@@ -19,7 +18,7 @@ Fetch JWTs for API access from oidc-jwt-provider
 ### Fetch an accessToken
 Within the provider we make use of several hooks to use the functionality exposed within the context.
 
-The accessToken is directly returned from the fetchAccessToken function when already present and valid. 
+The accessToken is directly returned from the fetchAccessToken function when already present and valid.
 If not it will automatically fetch a new accessToken for you.
 
 To get the accessToken you can do this:
@@ -66,7 +65,7 @@ const claims = useAuthAccessClaims();
 console.log('This are the claims: ', claims)
 ```
 
-### Check session 
+### Check session
 To check if there is a session and for example show a loader when there's not yet one:
 
 ```javascript
