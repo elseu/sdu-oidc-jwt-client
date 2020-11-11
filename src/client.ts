@@ -134,7 +134,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
     this.setSessionToken(match[1]);
     if (redirect || typeof redirect === 'undefined') {
       // TODO: Still need to figure out why #. is appearing in url
-      window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace('#.', '');
+      window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
       return true;
     }
     return false;
