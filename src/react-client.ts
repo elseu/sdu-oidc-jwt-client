@@ -10,7 +10,6 @@ const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClient | OidcJwtClientOptions;
-  shouldRequireLogin?: boolean;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
 }
@@ -34,7 +33,6 @@ function isClientOptions(
 export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const {
     client: clientProp,
-    shouldRequireLogin = false,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
     children,
@@ -60,11 +58,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
       }
     } else {
       if (shouldAttemptLogin) {
-        const params: Record<string, string> = {};
-        if (!shouldRequireLogin) {
-          params.prompt = 'none';
-        }
-        client.authorize(params);
+        client.authorize({ prompt: 'none' });
       }
     }
     return () => {
@@ -74,18 +68,7 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     client,
     shouldMonitorAccessTokens,
     shouldAttemptLogin,
-    shouldRequireLogin,
   ]);
-
-  React.useEffect(() => {
-    if (shouldRequireLogin) {
-      client.getAccessToken().then((result) => {
-        if (!result?.token) {
-          client.authorize();
-        }
-      });
-    }
-  }, [client, shouldRequireLogin]);
 
   return React.createElement(
     OidcJwtContext.Provider,

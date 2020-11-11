@@ -11,7 +11,6 @@ import {
 
 interface TemplateProps {
   url: string;
-  shouldRequireLogin: boolean;
   shouldAttemptLogin: boolean;
   shouldMonitorAccessTokens: boolean;
   testApiUrl?: string;
@@ -20,7 +19,6 @@ interface TemplateProps {
 const Template: Story<TemplateProps> = (props: TemplateProps) => {
   const {
     url,
-    shouldRequireLogin = false,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = false,
     testApiUrl,
@@ -28,7 +26,6 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
   return (
     <OidcJwtProvider
       client={{ url }}
-      shouldRequireLogin={shouldRequireLogin}
       shouldAttemptLogin={shouldAttemptLogin}
       shouldMonitorAccessTokens={shouldMonitorAccessTokens}
     >
