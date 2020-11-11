@@ -83,7 +83,7 @@ export interface OidcJwtClient {
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-  getUserInfo<T>(): Promise<T>;
+  getUserInfo<T>(): Promise<T | null>;
 }
 
 function buildQuerystring(params: Record<string, string>): string {
@@ -166,6 +166,9 @@ class OidcJwtClientImpl implements OidcJwtClient {
 
   fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
     const fetchedAt = new Date().getTime();
+    if (!this.csrfToken) {
+      return Promise.resolve({ token: null, claims: null });
+    }
     this.accessTokenCache = ((this.fetchJsonWithAuth(
       this.baseUrl + '/token',
     ) as unknown) as Promise<AccessTokenInfo<T>>).then((result) => {
@@ -186,7 +189,10 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return this.accessTokenCache.then((result) => result.value);
   }
 
-  fetchUserInfo<T>(): Promise<T> {
+  fetchUserInfo<T>(): Promise<T | null> {
+    if (!this.csrfToken) {
+      return Promise.resolve(null);
+    }
     this.userInfoCache = this.fetchJsonWithAuth(
       this.baseUrl + '/userinfo',
     ).then((result) => {
@@ -240,7 +246,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
     });
   }
 
-  getUserInfo<T>(): Promise<T> {
+  getUserInfo<T>(): Promise<T | null> {
     if (this.userInfoCache) {
       return this.userInfoCache;
     }

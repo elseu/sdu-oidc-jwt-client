@@ -109,7 +109,7 @@ export function useAuthControls(): OidcAuthControls {
 
 export function useAuthUserInfo<T>(): T | null {
   const client = useAuthClient();
-  return usePromiseResult<T>(() => {
+  return usePromiseResult<T | null>(() => {
     if (!client) return null;
     return client.getUserInfo<T>();
   }, [client]);
