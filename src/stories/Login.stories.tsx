@@ -180,7 +180,6 @@ export const Login = Template.bind({});
 Login.args = {
   url: 'https://api-auth.acc.titan.awssdu.nl',
   testApiUrl: 'https://api-auth-test.acc.titan.awssdu.nl',
-  shouldRequireLogin: false,
   shouldAttemptLogin: true,
   shouldMonitorAccessTokens: true,
 };
