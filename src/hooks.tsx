@@ -1,4 +1,5 @@
 import { useAsync } from 'react-use';
+import { AsyncState } from 'react-use/lib/useAsync';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
@@ -21,23 +22,19 @@ function useAuthControls(): OidcAuthControls {
   return { authorize, logout };
 }
 
-function useAuthUserInfo<T>(): T | null | undefined {
+function useAuthUserInfo<T>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
   const getUserInfo = useStore(state => state.methods.getUserInfo);
-  const { hasValidSession } = useAuthSessionInfo();
-
-  const { value } = useAsync<() => Promise<T | null>>(async () => getUserInfo<T>(), []);
-  return hasValidSession ? value : null;
+  const state = useAsync<() => Promise<T | null>>(async () => getUserInfo<T>(), []);
+  return state;
 }
 
-function useAuthAccessClaims<T extends ClaimsBase>(): T | null | undefined {
+function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
-  const { hasValidSession } = useAuthSessionInfo();
-
-  const { value } = useAsync<() => Promise<T | null>>(async () =>
+  const state = useAsync<() => Promise<T | null>>(async () =>
     getAccessToken<T>().then(info => info?.claims ?? null), []);
-  return hasValidSession ? value : null;
+  return state;
 }
 
 function useAuthSessionInfo(): OidcAuthSessionInfo {
