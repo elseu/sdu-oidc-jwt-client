@@ -2,12 +2,12 @@ import { Meta, Story } from '@storybook/react';
 import React, { useState } from 'react';
 
 import {
-  OidcJwtProvider,
   useAuthAccessClaims,
   useAuthAccessToken,
   useAuthControls,
   useAuthUserInfo,
-} from '../react-client';
+} from '../hooks';
+import { OidcJwtProvider } from '../OidcJwtProvider';
 
 interface TemplateProps {
   url: string;
@@ -88,6 +88,9 @@ const Content = (props: ContentProps) => {
   const claims = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
+
+  console.log('userInfo', userInfo);
+  console.log('claims', claims);
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -175,7 +178,7 @@ const LargeTextArea = (props: LargeTextAreaProps) => {
   );
 };
 
-export const Login = Template.bind({});
+const Login = Template.bind({});
 
 Login.args = {
   url: 'https://api-auth.acc.titan.awssdu.nl',
