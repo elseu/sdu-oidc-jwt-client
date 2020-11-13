@@ -170,6 +170,8 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
 export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
   const getAccessToken = React.useCallback(() =>
-    client.getAccessToken().then((result) => result?.token ?? null), [client]);
+    client
+      .getAccessToken()
+      .then((result) => result?.token ?? null), [client]);
   return getAccessToken;
 }
