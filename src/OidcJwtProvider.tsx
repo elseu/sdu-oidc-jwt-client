@@ -52,16 +52,16 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [receiveSessionToken]);
 
   useEffect(() => {
-    if (!hasSession && shouldAttemptLogin) {
-      authorize({ prompt: 'none' });
-    }
+    if (!hasSession || !shouldMonitorAccessTokens) return;
 
-    if (hasSession && shouldMonitorAccessTokens) {
-      monitorAccessToken();
-    }
+    monitorAccessToken();
     return () => stopMonitoringAccessToken();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldMonitorAccessTokens, shouldAttemptLogin]);
+  }, [hasSession, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
+
+  useEffect(() => {
+    if (hasSession || !shouldAttemptLogin) return;
+    authorize({ prompt: 'none' });
+  }, [authorize, hasSession, shouldAttemptLogin]);
 
   const context: OidcJwtContextData = useMemo(() => ({ useStore }), [useStore]);
 

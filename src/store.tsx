@@ -85,7 +85,7 @@ interface StoreMethods {
 export type UseOidcJwtClientStore = {
   baseUrl: string
   csrfToken: string | null
-  authorizationDefaults: AnyObject
+  defaultAuthConfig: AnyObject
   monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null
 
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
@@ -101,15 +101,15 @@ export type UseOidcJwtClientStore = {
 
 export interface OidcJwtClientOptions {
   url: string;
-  authorizationDefaults?: AnyObject
+  defaultAuthConfig?: Params
 }
 
 const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
-const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> => {
+function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => ({
     baseUrl: options.url.replace(/\/$/, ''),
     csrfToken: localStorage.getItem(CSRF_TOKEN_STORAGE_KEY) ?? null,
-    authorizationDefaults: options.authorizationDefaults ?? {},
+    defaultAuthConfig: options.defaultAuthConfig ?? {},
     monitorAccessTokenTimeout: null,
 
     accessTokenCache: undefined,
@@ -126,11 +126,15 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
     methods: {
 
       authorize(params: Params = {}) {
-        const { authorizationDefaults, baseUrl } = get();
-        const queryParams = { ...authorizationDefaults, ...params };
-        if (!queryParams.redirect_uri) {
-          queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
-        }
+        const { defaultAuthConfig, baseUrl } = get();
+        // eslint-disable-next-line max-len
+        const redirect_uri = defaultAuthConfig.redirect_uri || params.redirect_uri || stripTokenFromUrl(window.location.href);
+
+        const queryParams = {
+          ...defaultAuthConfig,
+          ...params,
+          redirect_uri,
+        };
         window.location.href = baseUrl + '/authorize?' + buildQuerystring(queryParams);
       },
 
@@ -144,11 +148,12 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
 
       receiveSessionToken(redirect = true): boolean {
         const { methods: { setSessionToken } } = get();
-        const match = window.location.search.match(/[?&]token=([^&]+)/);
-        if (!match) return false;
 
-        setSessionToken(match[1]);
-        if (redirect || typeof redirect === 'undefined') {
+        const tokenMatch = window.location.search.match(/[?&]token=([^&]+)/);
+        if (!tokenMatch) return false;
+
+        setSessionToken(tokenMatch[1]);
+        if (!redirect) {
           // TODO: Still need to figure out why #. is appearing in url
           window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
           return true;
@@ -197,6 +202,7 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
         if (userInfoCache) {
           return userInfoCache;
         }
+
         return fetchUserInfo<T>();
       },
 
@@ -204,6 +210,7 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
         const { accessTokenCache, methods: { fetchAccessToken } } = get();
 
         const updateToken = () => {
+          console.log('updateToken');
           fetchAccessToken();
           accessTokenCache?.then(cache => {
             if (!cache.validUntil) return;
@@ -217,6 +224,7 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
             set({ monitorAccessTokenTimeout: setTimeout(updateToken, timeoutMs) });
           });
         };
+
         updateToken();
       },
 
@@ -238,15 +246,15 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
           return Promise.resolve(null);
         }
 
+        const userInfoCacheError = (error: HttpError) => {
+          if (error.statusCode === 403) {
+            throw new Error('Unknown error fetching userinfo');
+          }
+          return null;
+        };
+
         const userInfoCache = Http.get<T>(`${baseUrl}/userinfo`, csrfToken)
-          .then(
-            result => result,
-            error => {
-              if (error.statusCode === 403) {
-                throw new Error('Unknown error fetching userinfo');
-              }
-              return null;
-            });
+          .then(result => result, userInfoCacheError);
 
         set({ userInfoCache });
         return userInfoCache;
@@ -271,21 +279,10 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
         return accessTokenCache.then((result) => result.value);
       },
 
-      fetchAccessTokenError(error: HttpError): AccessTokenCache<any> {
-        const { isLastAccessTokenInvalid } = get();
-        const emptyErrorToken = { value: { token: null, claims: null }, validUntil: null, isError: true };
-
-        if (error.statusCode !== 403) return emptyErrorToken;
-
-        if (!isLastAccessTokenInvalid) {
-          set({ isLastAccessTokenInvalid: true });
-        }
-        return emptyErrorToken;
-      },
-
       fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number) {
         const { isLastAccessTokenInvalid } = get();
         const { claims, token } = value;
+
         let validUntil = null;
 
         if (isLastAccessTokenInvalid) {
@@ -301,8 +298,21 @@ const createOidcJwtClientStore = (options: OidcJwtClientOptions): UseStore<UseOi
         }
         return { value, validUntil, isError: false };
       },
+
+      fetchAccessTokenError(error: HttpError): AccessTokenCache<any> {
+        const { isLastAccessTokenInvalid } = get();
+        const emptyErrorToken = { value: { token: null, claims: null }, validUntil: null, isError: true };
+
+        if (error.statusCode !== 403) return emptyErrorToken;
+
+        if (!isLastAccessTokenInvalid) {
+          set({ isLastAccessTokenInvalid: true });
+        }
+        return emptyErrorToken;
+      },
+
     },
   }));
-};
+}
 
 export { createOidcJwtClientStore };
