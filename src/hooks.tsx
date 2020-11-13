@@ -29,8 +29,8 @@ function usePromiseResult<T>(
 
 function useAuthControls(): OidcAuthControls {
   const { useStore } = useOidcJwtContext();
-  const [logout, authorize] = useStore(state => [state.methods.logout, state.methods.authorize]);
-  return { logout, authorize };
+  const controls = useStore(state => ({ logout: state.methods.logout, authorize: state.methods.authorize }));
+  return controls;
 }
 
 function useAuthUserInfo<T>(): T | null {

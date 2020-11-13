@@ -210,7 +210,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         const { accessTokenCache, methods: { fetchAccessToken } } = get();
 
         const updateToken = () => {
-          console.log('updateToken');
           fetchAccessToken();
           accessTokenCache?.then(cache => {
             if (!cache.validUntil) return;
@@ -253,29 +252,31 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
           return null;
         };
 
-        const userInfoCache = Http.get<T>(`${baseUrl}/userinfo`, csrfToken)
+        const userInfoCache = Http.get<T>(baseUrl + '/userinfo', csrfToken)
           .then(result => result, userInfoCacheError);
 
         set({ userInfoCache });
+
         return userInfoCache;
       },
 
       fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
-        const { baseUrl, csrfToken } = get();
-        const { methods: { fetchAccessTokenSuccess, fetchAccessTokenError } } = get();
+        const { baseUrl, csrfToken, methods } = get();
+        const { fetchAccessTokenSuccess, fetchAccessTokenError } = methods;
 
         const fetchedAt = new Date().getTime();
         if (!csrfToken) {
           return Promise.resolve({ token: null, claims: null });
         }
 
-        const accessTokenCache = Http.get<AccessTokenInfo<T>>(`${baseUrl}/token`, csrfToken)
+        const accessTokenCache = Http.get<AccessTokenInfo<T>>(baseUrl + '/token', csrfToken)
           .then(
             result => fetchAccessTokenSuccess<T>(result, fetchedAt),
             fetchAccessTokenError,
           );
 
         set({ accessTokenCache });
+
         return accessTokenCache.then((result) => result.value);
       },
 
@@ -289,26 +290,24 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
           set({ isLastAccessTokenInvalid: false });
         }
 
-        if (!token) {
-          return { value, validUntil, isError: false };
-        }
-
-        if (claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
+        if (token && claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
           validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
         }
+
         return { value, validUntil, isError: false };
       },
 
       fetchAccessTokenError(error: HttpError): AccessTokenCache<any> {
         const { isLastAccessTokenInvalid } = get();
-        const emptyErrorToken = { value: { token: null, claims: null }, validUntil: null, isError: true };
+        const value = { token: null, claims: null };
+        const response = { value, validUntil: null, isError: true };
 
-        if (error.statusCode !== 403) return emptyErrorToken;
+        if (error.statusCode !== 403) return response;
 
         if (!isLastAccessTokenInvalid) {
           set({ isLastAccessTokenInvalid: true });
         }
-        return emptyErrorToken;
+        return response;
       },
 
     },
