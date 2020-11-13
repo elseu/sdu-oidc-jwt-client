@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { ClaimsBase, OidcJwtClient, oidcJwtClient, OidcJwtClientOptions } from './client';
 
@@ -6,7 +7,7 @@ interface OidcJwtContextData {
   client: OidcJwtClient;
 }
 
-const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
+const OidcJwtContext = createContext<OidcJwtContextData | null>(null);
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClient | OidcJwtClientOptions;
@@ -42,21 +43,14 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     shouldMonitorAccessTokens = true,
     children,
   } = props;
-  const contextValue: OidcJwtContextData = React.useMemo(() => {
-    return {
-      client: isClientOptions(clientProp)
-        ? oidcJwtClient(clientProp)
-        : clientProp,
-    };
-  }, [clientProp]);
 
-  const { client } = contextValue;
+  const client = useMemo(() => isClientOptions(clientProp) ? oidcJwtClient(clientProp) : clientProp, [clientProp]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     client.receiveSessionToken();
   }, [client]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!client.hasSessionToken() && shouldAttemptLogin) {
       client.authorize({ prompt: 'none' });
     }
@@ -73,19 +67,21 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     shouldAttemptLogin,
   ]);
 
-  return React.createElement(
-    OidcJwtContext.Provider,
-    { value: contextValue },
-    children,
-  );
+  const context: OidcJwtContextData = useMemo(() => {
+    return {
+      client,
+    };
+  }, [client]);
+
+  return <OidcJwtContext.Provider value={context}>{children}</OidcJwtContext.Provider>;
 };
 
 export function usePromiseResult<T>(
   f: () => Promise<T> | null,
   deps: unknown[],
 ): T | null {
-  const [value, setValue] = React.useState<T | null>(null);
-  React.useEffect(() => {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
     f()?.then((result) => {
       setValue(result);
     });
@@ -95,7 +91,7 @@ export function usePromiseResult<T>(
 }
 
 function useOidcJwtContext(): OidcJwtContextData {
-  const context = React.useContext(OidcJwtContext);
+  const context = useContext(OidcJwtContext);
   if (!context) {
     throw new Error('Can only use useAuth...() inside OidcJwtProvider');
   }
@@ -108,7 +104,7 @@ function useAuthClient(): OidcJwtClient {
 
 export function useAuthControls(): OidcAuthControls {
   const client = useAuthClient();
-  return React.useMemo(() => ({
+  return useMemo(() => ({
     authorize(params: Record<string, string> = {}) {
       client?.authorize(params);
     },
@@ -142,12 +138,12 @@ export function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
 
 export function useAuthSessionInfo(): OidcAuthSessionInfo {
   const client = useAuthClient();
-  const [sessionInfo, setSessionInfo] = React.useState<OidcAuthSessionInfo>({
+  const [sessionInfo, setSessionInfo] = useState<OidcAuthSessionInfo>({
     hasSession: client.hasSessionToken(),
     hasValidSession: client.hasValidSession(),
   });
 
-  const sessionListenerCallback = React.useCallback(() => {
+  const sessionListenerCallback = useCallback(() => {
     setSessionInfo((sessionInfo) => {
       const hasSession = client.hasSessionToken();
       const hasValidSession = client.hasValidSession();
@@ -157,7 +153,7 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
     });
   }, [client, setSessionInfo]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     client.addSessionListener(sessionListenerCallback);
     return () => {
       client.removeSessionListener(sessionListenerCallback);
@@ -169,7 +165,7 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
 
 export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
-  const getAccessToken = React.useCallback(() =>
+  const getAccessToken = useCallback(() =>
     client
       .getAccessToken()
       .then((result) => result?.token ?? null), [client]);
