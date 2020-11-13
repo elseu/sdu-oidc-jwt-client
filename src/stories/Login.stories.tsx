@@ -175,7 +175,7 @@ const LargeTextArea = (props: LargeTextAreaProps) => {
   );
 };
 
-const Login = Template.bind({});
+export const Login = Template.bind({});
 
 Login.args = {
   url: 'https://api-auth.acc.titan.awssdu.nl',
