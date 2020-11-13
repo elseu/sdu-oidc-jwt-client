@@ -1,12 +1,14 @@
-import * as React from 'react';
+import React, { createContext, FC, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { UseStore } from 'zustand';
 
 import { ClaimsBase, OidcJwtClient, oidcJwtClient, OidcJwtClientOptions } from './client';
+import { useAuthStore } from './useAuthStore';
 
 interface OidcJwtContextData {
   client: OidcJwtClient;
 }
 
-const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
+const OidcJwtContext = createContext<OidcJwtContextData | null>(null);
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClient | OidcJwtClientOptions;
@@ -35,28 +37,31 @@ function isClientOptions(
   return 'url' in obj;
 }
 
-export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
+type UseAuthStore = {
+  expired?: boolean
+  setExpired: (expired: boolean) => void;
+};
+
+export const OidcJwtProvider: FC<OidcJwtProviderProps> = (props) => {
   const {
     client: clientProp,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
-    children,
   } = props;
-  const contextValue: OidcJwtContextData = React.useMemo(() => {
-    return {
-      client: isClientOptions(clientProp)
-        ? oidcJwtClient(clientProp)
-        : clientProp,
-    };
-  }, [clientProp]);
+  const useStoreRef = useRef<UseStore<UseAuthStore>>();
+  if (!useStoreRef.current) {
+    useStoreRef.current = useAuthStore;
+  }
+  const useStore = useStoreRef.current;
+  console.log(useStore);
 
-  const { client } = contextValue;
+  const client = useMemo(() => isClientOptions(clientProp) ? oidcJwtClient(clientProp) : clientProp, [clientProp]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     client.receiveSessionToken();
   }, [client]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!client.hasSessionToken() && shouldAttemptLogin) {
       client.authorize({ prompt: 'none' });
     }
@@ -73,19 +78,22 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     shouldAttemptLogin,
   ]);
 
-  return React.createElement(
-    OidcJwtContext.Provider,
-    { value: contextValue },
-    children,
-  );
+  const context: OidcJwtContextData = useMemo(() => {
+    return {
+      useStore,
+      client,
+    };
+  }, [client, useStore]);
+
+  return <OidcJwtContext.Provider value={context}/>;
 };
 
 export function usePromiseResult<T>(
   f: () => Promise<T> | null,
   deps: unknown[],
 ): T | null {
-  const [value, setValue] = React.useState<T | null>(null);
-  React.useEffect(() => {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
     f()?.then((result) => {
       setValue(result);
     });
@@ -95,7 +103,7 @@ export function usePromiseResult<T>(
 }
 
 function useOidcJwtContext(): OidcJwtContextData {
-  const context = React.useContext(OidcJwtContext);
+  const context = useContext(OidcJwtContext);
   if (!context) {
     throw new Error('Can only use useAuth...() inside OidcJwtProvider');
   }
@@ -103,12 +111,21 @@ function useOidcJwtContext(): OidcJwtContextData {
 }
 
 function useAuthClient(): OidcJwtClient {
+  // const state = useAuthStore(state => [state.setExpired, state.expired]);
   return useOidcJwtContext().client;
 }
 
+// export function useAuthControls(): OidcAuthControls {
+//   const useAuthStore = create<UseAuthStore>(set => ({
+//     expired: false,
+//     setExpired: (expired: boolean) => set({ expired }),
+//   }));
+//   const state = useAuthStore(state => [state.setExpired, state.expired]);
+//   return state;
+// }
 export function useAuthControls(): OidcAuthControls {
   const client = useAuthClient();
-  return React.useMemo(() => ({
+  return useMemo(() => ({
     authorize(params: Record<string, string> = {}) {
       client?.authorize(params);
     },
@@ -142,12 +159,12 @@ export function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
 
 export function useAuthSessionInfo(): OidcAuthSessionInfo {
   const client = useAuthClient();
-  const [sessionInfo, setSessionInfo] = React.useState<OidcAuthSessionInfo>({
+  const [sessionInfo, setSessionInfo] = useState<OidcAuthSessionInfo>({
     hasSession: client.hasSessionToken(),
     hasValidSession: client.hasValidSession(),
   });
 
-  const sessionListenerCallback = React.useCallback(() => {
+  const sessionListenerCallback = useCallback(() => {
     setSessionInfo((sessionInfo) => {
       const hasSession = client.hasSessionToken();
       const hasValidSession = client.hasValidSession();
@@ -157,7 +174,7 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
     });
   }, [client, setSessionInfo]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     client.addSessionListener(sessionListenerCallback);
     return () => {
       client.removeSessionListener(sessionListenerCallback);
@@ -169,7 +186,7 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
 
 export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
-  const getAccessToken = React.useCallback(() =>
+  const getAccessToken = useCallback(() =>
     client
       .getAccessToken()
       .then((result) => result?.token ?? null), [client]);
