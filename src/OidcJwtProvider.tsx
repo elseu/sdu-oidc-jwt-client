@@ -55,11 +55,13 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     if (!hasSession || !shouldMonitorAccessTokens) return;
 
     monitorAccessToken();
+
     return () => stopMonitoringAccessToken();
   }, [hasSession, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
     if (hasSession || !shouldAttemptLogin) return;
+
     authorize({ prompt: 'none' });
   }, [authorize, hasSession, shouldAttemptLogin]);
 
