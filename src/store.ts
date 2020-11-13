@@ -140,10 +140,11 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
 
       logout: (params: Params = {}) => {
         const { client } = get();
-        if (!params.post_logout_redirect_uri) {
-          params.post_logout_redirect_uri = window.location.href;
-        }
-        window.location.href = client.getBaseUrl() + '/logout?' + buildQuerystring(params);
+        const queryParams = {
+          ...params,
+          post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
+        };
+        window.location.href = client.getBaseUrl() + '/logout?' + buildQuerystring(queryParams);
       },
 
       receiveSessionToken(redirect = true) {
