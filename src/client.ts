@@ -156,13 +156,13 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
     this.authorizationDefaults = options.authorizationDefaults ?? {};
   }
 
-  private fetchJsonWithAuth(url: string): Promise<Record<string, unknown>> {
+  private fetchJsonWithAuth<T>(url: string): Promise<T> {
     return fetch(url, {
       headers: {
         Authorization: 'Bearer ' + this.csrfToken,
       },
       credentials: 'include',
-    }).then<Record<string, unknown>>((response) => {
+    }).then<T>((response) => {
       if (!response.ok) {
         throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
       }
@@ -212,86 +212,109 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
     return this.hasSessionToken() && !this.isLastAccessTokenInvalid;
   }
 
+  private fetchAccessTokenSuccess<T extends ClaimsBase>(result: AccessTokenInfo<T>, fetchedAt: number) {
+    let validUntil = null;
+    const claims = result.claims;
+
+    if (this.isLastAccessTokenInvalid) {
+      this.isLastAccessTokenInvalid = false;
+      this.emit(SessionChangedEvent);
+    }
+
+    if (!result.token) {
+      return { value: result, validUntil, isError: false };
+    }
+
+    if (claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
+      validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
+    }
+    return { value: result, validUntil, isError: false };
+  }
+
+  private fetchAccessTokenError(error: HttpError) {
+    if (error.statusCode === 403) {
+      if (!this.isLastAccessTokenInvalid) {
+        this.isLastAccessTokenInvalid = true;
+        this.emit(SessionChangedEvent);
+      }
+      return { value: { token: null, claims: null }, validUntil: null, isError: true };
+    }
+    throw error;
+  }
+
   fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
     const fetchedAt = new Date().getTime();
     if (!this.csrfToken) {
       return Promise.resolve({ token: null, claims: null });
     }
-    this.accessTokenCache = ((this.fetchJsonWithAuth(
-      this.baseUrl + '/token',
-    ) as unknown) as Promise<AccessTokenInfo<T>>).then((result) => {
-      if (this.isLastAccessTokenInvalid) {
-        this.isLastAccessTokenInvalid = false;
-        this.emit(SessionChangedEvent);
-      }
-      if (!result.token) {
-        return { value: result, validUntil: null, isError: false };
-      }
-      let validUntil = null;
-      const claims = result.claims;
-      if (
-        claims &&
-        typeof claims.iat === 'number' &&
-        typeof claims.exp === 'number'
-      ) {
-        validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
-      }
-      return { value: result, validUntil: validUntil, isError: false };
-    }, (error: HttpError) => {
-      if (error.statusCode === 403) {
-        if (!this.isLastAccessTokenInvalid) {
-          this.isLastAccessTokenInvalid = true;
-          this.emit(SessionChangedEvent);
-        }
-        return { value: { token: null, claims: null }, validUntil: null, isError: true };
-      }
-      throw error;
-    });
+    this.accessTokenCache = this.fetchJsonWithAuth<AccessTokenInfo<T>>(this.baseUrl + '/token')
+      .then(result => this.fetchAccessTokenSuccess<T>(result, fetchedAt), this.fetchAccessTokenError);
     return this.accessTokenCache.then((result) => result.value);
+  }
+
+  private fetchUserInfoError(error: HttpError) {
+    if (error.statusCode === 403) {
+      throw new Error('Unknown error fetching userinfo');
+    }
+  }
+
+  private fetchUserInfoSuccess<T>(result: T) {
+    return result;
   }
 
   fetchUserInfo<T>(): Promise<T | null> {
     if (!this.csrfToken) {
       return Promise.resolve(null);
     }
-    this.userInfoCache = this.fetchJsonWithAuth(
-      this.baseUrl + '/userinfo',
-    ).then((result) => {
-      if (result.status && result.status === 'error') {
-        throw new Error((result.message as string) ?? 'Unknown error fetching userinfo');
-      }
-      return result as T;
-    });
-    return this.userInfoCache as Promise<T>;
+
+    this.userInfoCache = this.fetchJsonWithAuth<T>(this.baseUrl + '/userinfo')
+      .then(result => this.fetchUserInfoSuccess<T>(result), this.fetchUserInfoError);
+    return this.userInfoCache;
+  }
+
+  private setMonitorAccessTokenTimeout(cache: AccessTokenCache<any>): void {
+    if (!cache.validUntil) return;
+
+    // Update the token some 10 seconds before it expires.
+    const now = new Date().getTime();
+    const tokenUpdateTimestamp = cache.validUntil - 1000;
+    const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
+
+    // Set a timeout to fetch a new token in X seconds.
+    this.monitorAccessTokenTimeout = setTimeout(this.updateToken, timeoutMs);
+  }
+
+  private updateToken(): void {
+    this.fetchAccessToken();
+    this.accessTokenCache?.then((cache) => this.setMonitorAccessTokenTimeout(cache));
   }
 
   monitorAccessToken(): void {
-    const updateToken = () => {
-      this.fetchAccessToken();
-      this.accessTokenCache?.then((cache) => {
-        if (cache.validUntil) {
-          // Update the token some 10 seconds before it expires.
-          const now = new Date().getTime();
-          const tokenUpdateTimestamp = cache.validUntil - 1000;
-          const timeoutMs = Math.max(
-            10000,
-            tokenUpdateTimestamp - now,
-          );
-          // Set a timeout to fetch a new token in X seconds.
-          this.monitorAccessTokenTimeout = setTimeout(
-            updateToken,
-            timeoutMs,
-          );
-        }
-      });
-    };
-    updateToken();
+    this.updateToken();
   }
 
   stopMonitoringAccessToken(): void {
-    if (this.monitorAccessTokenTimeout) {
-      clearTimeout(this.monitorAccessTokenTimeout);
+    if (!this.monitorAccessTokenTimeout) return;
+    clearTimeout(this.monitorAccessTokenTimeout);
+  }
+
+  private getAccessTokenCache(
+    cache: AccessTokenCache<any>,
+    currentAccessTokenCache: Promise<AccessTokenCache<any>>,
+  ): null | AccessTokenInfo<any> | Promise<AccessTokenInfo<ClaimsBase> | null> {
+    const now = new Date().getTime();
+    if (cache.isError) {
+      return null;
     }
+    if (cache.validUntil && cache.validUntil > now) {
+      return cache.value;
+    }
+    // Cache is no longer valid; go again.
+    if (this.accessTokenCache === currentAccessTokenCache) {
+      // Remove the cache, but only if it hasn't already been removed and recreated by someone else.
+      this.accessTokenCache = null;
+    }
+    return this.getAccessToken();
   }
 
   getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null> {
@@ -299,21 +322,8 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
       return this.fetchAccessToken<T>();
     }
     const currentAccessTokenCache = this.accessTokenCache;
-    return this.accessTokenCache.then((cache) => {
-      const now = new Date().getTime();
-      if (cache.isError) {
-        return null;
-      }
-      if (cache.validUntil && cache.validUntil > now) {
-        return cache.value;
-      }
-      // Cache is no longer valid; go again.
-      if (this.accessTokenCache === currentAccessTokenCache) {
-        // Remove the cache, but only if it hasn't already been removed and recreated by someone else.
-        this.accessTokenCache = null;
-      }
-      return this.getAccessToken();
-    });
+
+    return this.accessTokenCache.then((cache) => this.getAccessTokenCache(cache, currentAccessTokenCache));
   }
 
   getUserInfo<T>(): Promise<T | null> {

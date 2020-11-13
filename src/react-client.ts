@@ -57,14 +57,12 @@ export const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [client]);
 
   React.useEffect(() => {
-    if (client.hasSessionToken()) {
-      if (shouldMonitorAccessTokens) {
-        client.monitorAccessToken();
-      }
-    } else {
-      if (shouldAttemptLogin) {
-        client.authorize({ prompt: 'none' });
-      }
+    if (!client.hasSessionToken() && shouldAttemptLogin) {
+      client.authorize({ prompt: 'none' });
+    }
+
+    if (client.hasSessionToken() && shouldMonitorAccessTokens) {
+      client.monitorAccessToken();
     }
     return () => {
       client.stopMonitoringAccessToken();
@@ -171,11 +169,7 @@ export function useAuthSessionInfo(): OidcAuthSessionInfo {
 
 export function useAuthAccessToken(): { (): Promise<string | null> } {
   const client = useAuthClient();
-  return React.useMemo(() => {
-    return () => {
-      return client
-        .getAccessToken()
-        .then((result) => result?.token ?? null);
-    };
-  }, [client]);
+  const getAccessToken = React.useCallback(() =>
+    client.getAccessToken().then((result) => result?.token ?? null), [client]);
+  return getAccessToken;
 }

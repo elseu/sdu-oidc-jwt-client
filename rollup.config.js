@@ -8,6 +8,7 @@ import pkg from './package.json';
 
 export default {
   input: 'src/index.ts',
+  external: ['events'],
   output: [
     {
       file: pkg.main,
