@@ -1,8 +1,6 @@
 import create, { UseStore } from 'zustand';
 
-import { HttpError } from './errors';
-import Http from './Http';
-import { buildQuerystring, stripTokenFromUrl } from './utils';
+import { buildQuerystring, Http, HttpError, stripTokenFromUrl } from './utils';
 
 interface AnyObject {
   [key:string]: string
