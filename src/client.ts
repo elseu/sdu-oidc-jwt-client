@@ -1,4 +1,6 @@
+import { EventEmitter } from 'events';
 import queryString from 'query-string';
+
 export interface OidcJwtClientOptions {
   url: string;
   authorizationDefaults?: Record<string, string>;
@@ -7,6 +9,7 @@ export interface OidcJwtClientOptions {
 interface AccessTokenCache<T extends ClaimsBase> {
   value: AccessTokenInfo<T>;
   validUntil: number | null;
+  isError: boolean;
 }
 
 interface AccessTokenInfo<T extends ClaimsBase> {
@@ -52,6 +55,12 @@ export interface OidcJwtClient {
   hasSessionToken(): boolean;
 
   /**
+   * Check if our session is valid.
+   * @return True if we have a session and it's valid, false otherwise.
+   */
+  hasValidSession(): boolean;
+
+  /**
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
@@ -83,7 +92,18 @@ export interface OidcJwtClient {
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-  getUserInfo<T>(): Promise<T>;
+  getUserInfo<T>(): Promise<T | null>;
+
+  /**
+   * Add a listener that gets called whenever something about the session changes.
+   */
+  addSessionListener(callback: () => void): void;
+
+  /**
+   *
+   * Remove a listener that was added through addSessionListener().
+   */
+  removeSessionListener(callback: () => void): void;
 }
 
 function buildQuerystring(params: Record<string, string>): string {
@@ -100,17 +120,37 @@ function stripTokenFromUrl(href: string): string {
   return queryString.stringifyUrl({ url, query: params, fragmentIdentifier });
 }
 
-class OidcJwtClientImpl implements OidcJwtClient {
+const SessionChangedEvent = 'session_changed';
+
+export interface HttpErrorInput {
+  message: string
+  statusCode: number
+  response?: Response
+}
+export class HttpError extends Error {
+  statusCode: number
+  response?: Response
+  constructor(input: HttpErrorInput) {
+    super(input.message);
+    this.response = input.response;
+    this.statusCode = input.statusCode;
+    this.name = 'HttpError';
+  }
+}
+
+class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined;
+  private accessTokenCache: Promise<AccessTokenCache<any>> | undefined | null;
   private userInfoCache: any
   private baseUrl: string;
   private csrfToken: string | null;
   private csrfTokenStorageKey = 'oidc_jwt_provider_token';
   private monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null = null;
   private authorizationDefaults: Record<string, string>;
+  private isLastAccessTokenInvalid = false;
 
   constructor(options: OidcJwtClientOptions) {
+    super();
     this.baseUrl = options.url.replace(/\/$/, '');
     this.csrfToken = localStorage.getItem(this.csrfTokenStorageKey) ?? null;
     this.authorizationDefaults = options.authorizationDefaults ?? {};
@@ -123,6 +163,9 @@ class OidcJwtClientImpl implements OidcJwtClient {
       },
       credentials: 'include',
     }).then<Record<string, unknown>>((response) => {
+      if (!response.ok) {
+        throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
+      }
       return response.json();
     });
   }
@@ -143,6 +186,7 @@ class OidcJwtClientImpl implements OidcJwtClient {
   setSessionToken(token: string): void {
     this.csrfToken = token;
     localStorage.setItem(this.csrfTokenStorageKey, this.csrfToken);
+    this.emit(SessionChangedEvent);
   }
 
   authorize(params: Record<string, string> = {}): void {
@@ -164,13 +208,24 @@ class OidcJwtClientImpl implements OidcJwtClient {
     return !!this.csrfToken;
   }
 
+  hasValidSession(): boolean {
+    return this.hasSessionToken() && !this.isLastAccessTokenInvalid;
+  }
+
   fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
     const fetchedAt = new Date().getTime();
+    if (!this.csrfToken) {
+      return Promise.resolve({ token: null, claims: null });
+    }
     this.accessTokenCache = ((this.fetchJsonWithAuth(
       this.baseUrl + '/token',
     ) as unknown) as Promise<AccessTokenInfo<T>>).then((result) => {
+      if (this.isLastAccessTokenInvalid) {
+        this.isLastAccessTokenInvalid = false;
+        this.emit(SessionChangedEvent);
+      }
       if (!result.token) {
-        return { value: result, validUntil: null };
+        return { value: result, validUntil: null, isError: false };
       }
       let validUntil = null;
       const claims = result.claims;
@@ -181,12 +236,24 @@ class OidcJwtClientImpl implements OidcJwtClient {
       ) {
         validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
       }
-      return { value: result, validUntil: validUntil };
+      return { value: result, validUntil: validUntil, isError: false };
+    }, (error: HttpError) => {
+      if (error.statusCode === 403) {
+        if (!this.isLastAccessTokenInvalid) {
+          this.isLastAccessTokenInvalid = true;
+          this.emit(SessionChangedEvent);
+        }
+        return { value: { token: null, claims: null }, validUntil: null, isError: true };
+      }
+      throw error;
     });
     return this.accessTokenCache.then((result) => result.value);
   }
 
-  fetchUserInfo<T>(): Promise<T> {
+  fetchUserInfo<T>(): Promise<T | null> {
+    if (!this.csrfToken) {
+      return Promise.resolve(null);
+    }
     this.userInfoCache = this.fetchJsonWithAuth(
       this.baseUrl + '/userinfo',
     ).then((result) => {
@@ -231,20 +298,37 @@ class OidcJwtClientImpl implements OidcJwtClient {
     if (!this.accessTokenCache) {
       return this.fetchAccessToken<T>();
     }
+    const currentAccessTokenCache = this.accessTokenCache;
     return this.accessTokenCache.then((cache) => {
       const now = new Date().getTime();
+      if (cache.isError) {
+        return null;
+      }
       if (cache.validUntil && cache.validUntil > now) {
         return cache.value;
       }
-      return this.fetchAccessToken();
+      // Cache is no longer valid; go again.
+      if (this.accessTokenCache === currentAccessTokenCache) {
+        // Remove the cache, but only if it hasn't already been removed and recreated by someone else.
+        this.accessTokenCache = null;
+      }
+      return this.getAccessToken();
     });
   }
 
-  getUserInfo<T>(): Promise<T> {
+  getUserInfo<T>(): Promise<T | null> {
     if (this.userInfoCache) {
       return this.userInfoCache;
     }
     return this.fetchUserInfo<T>();
+  }
+
+  addSessionListener(callback: () => void) {
+    this.addListener(SessionChangedEvent, callback);
+  }
+
+  removeSessionListener(callback: () => void) {
+    this.removeListener(SessionChangedEvent, callback);
   }
 }
 
