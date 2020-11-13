@@ -89,9 +89,6 @@ const Content = (props: ContentProps) => {
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
 
-  console.log('userInfo', userInfo);
-  console.log('claims', claims);
-
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
       setToken(token);
