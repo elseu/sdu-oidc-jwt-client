@@ -29,8 +29,9 @@ function usePromiseResult<T>(
 
 function useAuthControls(): OidcAuthControls {
   const { useStore } = useOidcJwtContext();
-  const controls = useStore(state => ({ logout: state.methods.logout, authorize: state.methods.authorize }));
-  return controls;
+  const authorize = useStore(state => state.methods.authorize);
+  const logout = useStore(state => state.methods.logout);
+  return { authorize, logout };
 }
 
 function useAuthUserInfo<T>(): T | null {
@@ -61,11 +62,12 @@ function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
 
 function useAuthSessionInfo(): OidcAuthSessionInfo {
   const { useStore } = useOidcJwtContext();
-  const [hasSessionToken, hasValidSession] = useStore(state => [state.hasSessionToken, state.hasValidSession]);
+  const hasSession = useStore(state => state.hasSessionToken());
+  const hasValidSession = useStore(state => state.hasValidSession());
 
   return {
-    hasSession: hasSessionToken(),
-    hasValidSession: hasValidSession(),
+    hasSession,
+    hasValidSession,
   };
 }
 

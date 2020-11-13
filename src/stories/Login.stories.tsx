@@ -127,7 +127,6 @@ const Content = (props: ContentProps) => {
   const onClickLogin = React.useCallback(() => {
     authorize();
   }, [authorize]);
-
   return (
     <>
       <div>
