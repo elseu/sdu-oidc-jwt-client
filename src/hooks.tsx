@@ -3,11 +3,6 @@ import { useEffect, useState } from 'react';
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
 
-interface OidcAuthIdentity {
-  accessClaims: Record<string, unknown>;
-  userInfo: Record<string, unknown>;
-}
-
 interface OidcAuthControls {
   authorize(params?: Params): void;
   logout(params?: Params): void;
@@ -60,7 +55,7 @@ function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
     if (!hasValidSession) {
       return Promise.resolve(null);
     }
-    return getAccessToken<T>().then<T>((info) => info?.claims as T ?? null);
+    return getAccessToken<T>().then(info => info?.claims ?? null);
   }, []);
 }
 
