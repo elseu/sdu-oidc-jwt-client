@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useAsync } from 'react-use';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
@@ -13,51 +13,31 @@ interface OidcAuthSessionInfo {
   hasValidSession: boolean;
 }
 
-function usePromiseResult<T>(
-  f: () => Promise<T> | null,
-  deps: unknown[],
-): T | null {
-  const [value, setValue] = useState<T | null>(null);
-  useEffect(() => {
-    f()?.then((result) => {
-      setValue(result);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return value;
-}
-
 function useAuthControls(): OidcAuthControls {
   const { useStore } = useOidcJwtContext();
   const authorize = useStore(state => state.methods.authorize);
   const logout = useStore(state => state.methods.logout);
+
   return { authorize, logout };
 }
 
-function useAuthUserInfo<T>(): T | null {
+function useAuthUserInfo<T>(): T | null | undefined {
   const { useStore } = useOidcJwtContext();
   const getUserInfo = useStore(state => state.methods.getUserInfo);
   const { hasValidSession } = useAuthSessionInfo();
 
-  return usePromiseResult<T | null>(() => {
-    if (!hasValidSession) {
-      return Promise.resolve(null);
-    }
-    return getUserInfo<T>();
-  }, []);
+  const { value } = useAsync<() => Promise<T | null>>(async () => getUserInfo<T>(), []);
+  return hasValidSession ? value : null;
 }
 
-function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
+function useAuthAccessClaims<T extends ClaimsBase>(): T | null | undefined {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
   const { hasValidSession } = useAuthSessionInfo();
 
-  return usePromiseResult<T | null>(() => {
-    if (!hasValidSession) {
-      return Promise.resolve(null);
-    }
-    return getAccessToken<T>().then(info => info?.claims ?? null);
-  }, []);
+  const { value } = useAsync<() => Promise<T | null>>(async () =>
+    getAccessToken<T>().then(info => info?.claims ?? null), []);
+  return hasValidSession ? value : null;
 }
 
 function useAuthSessionInfo(): OidcAuthSessionInfo {

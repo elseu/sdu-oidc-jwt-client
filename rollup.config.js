@@ -31,6 +31,10 @@ export default {
       typescript,
       exclude: ['**.test.tsx', '**.stories.tsx'],
     }),
-    commonjs(),
+    commonjs({
+      namedExports: {
+        'node_modules/react-is/index.js': ['isValidElementType'],
+      },
+    }),
   ],
 };

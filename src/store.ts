@@ -155,10 +155,10 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
 
         setSessionToken(token);
 
-        if (!redirect) {
-          // TODO: Still need to figure out why #. is appearing in url
-          window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-        }
+        if (!redirect) return;
+
+        // TODO: Still need to figure out why #. is appearing in url
+        window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
       },
 
       validateAccessTokenCache<T extends ClaimsBase>(
@@ -167,13 +167,14 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       ): null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null> {
         const { accessTokenCache, methods: { getAccessToken } } = get();
         const now = new Date().getTime();
+        const { isError, validUntil, value } = cache;
 
-        if (cache.isError) {
+        if (isError) {
           return null;
         }
 
-        if (cache.validUntil && cache.validUntil > now) {
-          return cache.value;
+        if (validUntil && validUntil > now) {
+          return value;
         }
 
         // Cache is no longer valid; go again.
@@ -192,7 +193,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         }
 
         const currentAccessTokenCache = accessTokenCache;
-
         return accessTokenCache.then((cache) => validateAccessTokenCache<T>(cache, currentAccessTokenCache));
       },
 
@@ -235,6 +235,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
 
       setSessionToken(token: string): void {
         const { client } = get();
+        // Save token to store, HttpClient and localStorage
         set({ csrfToken: token });
         client.setToken(token);
         localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
