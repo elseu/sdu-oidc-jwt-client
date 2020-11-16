@@ -79,18 +79,6 @@ interface StoreMethods {
   removeSessionToken(): void;
 
   /**
-   * Set logged in to true or false
-   * @param {boolean} isLoggedIn
-   */
-  setLoggedIn(isLoggedIn: boolean): void;
-
-  /**
-   * Remove our logged in state
-   * @param {boolean} isLoggedIn
-   */
-  removeLoggedIn(): void;
-
-  /**
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
@@ -113,7 +101,6 @@ export type UseOidcJwtClientStore = {
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
   userInfoCache: any
 
-  isLoggedIn: boolean
   isLastAccessTokenInvalid: boolean
   hasSessionToken: () => boolean
   hasValidSession: () => boolean
@@ -174,14 +161,12 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       logout: (params: Params = {}) => {
-        const { baseUrl, methods: { removeSessionToken, setLoggedIn } } = get();
+        const { baseUrl } = get();
         const queryParams = {
           ...params,
           post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
         };
 
-        removeSessionToken();
-        setLoggedIn(false);
         window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
       },
 
@@ -271,16 +256,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         clearTimeout(monitorAccessTokenTimeout);
       },
 
-      setLoggedIn(isLoggedIn: boolean): void {
-        set({ isLoggedIn });
-        localStorage.setItem(LOGGEDIN_STORAGE_KEY, isLoggedIn.toString());
-      },
-
-      removeLoggedIn(): void {
-        set({ isLoggedIn: false });
-        localStorage.removeItem(LOGGEDIN_STORAGE_KEY);
-      },
-
       setSessionToken(token: string): void {
         set({ csrfToken: token });
         localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
@@ -333,14 +308,12 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number) {
-        const { methods: { setLoggedIn } } = get();
         const { claims, token } = value;
 
         set({ isLastAccessTokenInvalid: false });
 
         if (token && claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
           const validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
-          setLoggedIn(true);
           return { value, validUntil, isError: false };
         }
 
