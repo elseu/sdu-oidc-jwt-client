@@ -167,7 +167,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         const { methods: { setSessionToken } } = get();
 
         const match = window.location.search.match(/[?&]token=([^&]+)/) || [];
-        if (!match) return;
+        if (!match?.length) return;
 
         setSessionToken(match[1]);
 

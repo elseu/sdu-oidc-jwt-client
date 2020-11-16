@@ -61,7 +61,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   useEffect(() => {
     if (hasSession || !shouldAttemptLogin) return;
-
+    console.log('authorize');
     authorize({ prompt: 'none' });
   }, [authorize, hasSession, shouldAttemptLogin]);
 
