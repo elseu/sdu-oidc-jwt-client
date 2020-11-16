@@ -83,10 +83,10 @@ interface Claims {
 
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
-  const { data: userInfo } = useAuthUserInfo<UserInfo>();
+  const { value: userInfo } = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
-  const { data: claims } = useAuthAccessClaims<Claims>();
+  const { value: claims } = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
   const sessionInfo = useAuthSessionInfo();
