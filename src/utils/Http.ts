@@ -1,11 +1,12 @@
 import { buildQuerystring } from './buildQuerystring';
+import { CSRF_TOKEN_STORAGE_KEY } from './config';
 import { HttpError } from './errors';
 
 interface Params {
   [key:string]: string
 }
 
-type Token = string | undefined
+type Token = string | null
 type RequestFn = <T = any>(url: string, data?: Params, config?: RequestConfig) => Promise<T>
 type RequestConfig = RequestInit & {
   baseUrl?: string
@@ -13,13 +14,14 @@ type RequestConfig = RequestInit & {
 }
 export class HttpClient {
   private defaultConfig: RequestConfig = {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
   }
 
+  private token: Token = localStorage.getItem(CSRF_TOKEN_STORAGE_KEY) || null
   private config: RequestConfig = {}
-  private token: Token
 
   constructor(config: RequestConfig = {}) {
     this.config = {
@@ -50,7 +52,7 @@ export class HttpClient {
 
   public get = this.createRequest()
   public getBaseUrl = () => this.config.baseUrl || ''
-  public setToken = (token: Token) => (this.token = token)
+  public setToken = (token: string | null) => (this.token = token)
 
   private setAuthenticationHeaders(config: RequestConfig) {
     // if authenticated set bearer token
@@ -58,7 +60,6 @@ export class HttpClient {
       config.headers = {
         ...config.headers,
         Authorization: `Bearer ${this.token}`,
-        credentials: 'include',
       };
     }
   }
@@ -78,6 +79,7 @@ export class HttpClient {
     };
 
     this.setAuthenticationHeaders(config);
+    console.log(config);
 
     const { baseUrl = '' } = config;
     const requestFn = fetch(baseUrl + url, config)

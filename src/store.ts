@@ -1,6 +1,7 @@
 import create, { UseStore } from 'zustand';
 
 import { buildQuerystring, HttpClient, HttpError, stripTokenFromUrl } from './utils';
+import { CSRF_TOKEN_STORAGE_KEY } from './utils/config';
 
 interface AnyObject {
   [key:string]: string
@@ -69,9 +70,20 @@ interface StoreMethods {
 
   /**
    * Set our session token.
-   * @param token
+   * @param {string} token
    */
   setSessionToken(token: string): void;
+
+  /**
+   * Remove our session token.
+   */
+  removeSessionToken(): void;
+
+  /**
+   * Set logged in to true or false
+   * @param {boolean} isLoggedIn
+   */
+  setLoggedIn(isLoggedIn: boolean): void;
 
   /**
    * Fetch a fresh access token.
@@ -92,6 +104,7 @@ export type UseOidcJwtClientStore = {
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
   userInfoCache: any
 
+  isLoggedIn: boolean
   isLastAccessTokenInvalid: boolean
   hasSessionToken: () => boolean
   hasValidSession: () => boolean
@@ -104,7 +117,6 @@ export interface OidcJwtClientOptions {
   defaultAuthConfig?: Params
 }
 
-const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => ({
     client: new HttpClient({ baseUrl: options.url.replace(/\/$/, '') }),
@@ -116,6 +128,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
     accessTokenCache: undefined,
     userInfoCache: undefined,
 
+    isLoggedIn: false,
     isLastAccessTokenInvalid: false,
     hasSessionToken: () => !!get().csrfToken,
     hasValidSession: () => {
@@ -139,21 +152,24 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       logout: (params: Params = {}) => {
-        const { client } = get();
+        const { client, methods: { removeSessionToken, setLoggedIn } } = get();
         const queryParams = {
           ...params,
           post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
         };
+
+        removeSessionToken();
+        setLoggedIn(false);
         window.location.href = client.getBaseUrl() + '/logout?' + buildQuerystring(queryParams);
       },
 
       receiveSessionToken(redirect = true) {
         const { methods: { setSessionToken } } = get();
 
-        const [token] = window.location.search.match(/[?&]token=([^&]+)/) || [];
-        if (!token) return;
+        const match = window.location.search.match(/[?&]token=([^&]+)/) || [];
+        if (!match) return;
 
-        setSessionToken(token);
+        setSessionToken(match[1]);
 
         if (!redirect) {
           // TODO: Still need to figure out why #. is appearing in url
@@ -173,6 +189,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         }
 
         if (cache.validUntil && cache.validUntil > now) {
+          // setLoggedIn(true);
           return cache.value;
         }
 
@@ -240,6 +257,18 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
       },
 
+      removeSessionToken(): void {
+        const { client } = get();
+        // Save token to store, HttpClient and localStorage
+        set({ csrfToken: null });
+        client.setToken(null);
+        localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
+      },
+
+      setLoggedIn(isLoggedIn: boolean): void {
+        set({ isLoggedIn });
+      },
+
       fetchUserInfo<T>(): Promise<T | null> {
         const { csrfToken, client } = get();
 
@@ -281,12 +310,14 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number) {
+        const { methods: { setLoggedIn } } = get();
         const { claims, token } = value;
 
         set({ isLastAccessTokenInvalid: false });
 
         if (token && claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
           const validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
+          setLoggedIn(true);
           return { value, validUntil, isError: false };
         }
 

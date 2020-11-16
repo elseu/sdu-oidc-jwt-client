@@ -9,6 +9,7 @@ interface OidcAuthControls {
 }
 
 interface OidcAuthSessionInfo {
+  isLoggedIn: boolean
   hasSession: boolean;
   hasValidSession: boolean;
 }
@@ -62,10 +63,12 @@ function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
 
 function useAuthSessionInfo(): OidcAuthSessionInfo {
   const { useStore } = useOidcJwtContext();
+  const isLoggedIn = useStore(state => state.isLoggedIn);
   const hasSession = useStore(state => state.hasSessionToken());
   const hasValidSession = useStore(state => state.hasValidSession());
 
   return {
+    isLoggedIn,
     hasSession,
     hasValidSession,
   };

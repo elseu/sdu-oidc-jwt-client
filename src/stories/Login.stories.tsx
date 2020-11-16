@@ -5,6 +5,7 @@ import {
   useAuthAccessClaims,
   useAuthAccessToken,
   useAuthControls,
+  useAuthSessionInfo,
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
@@ -88,6 +89,8 @@ const Content = (props: ContentProps) => {
   const claims = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
+  const sessionInfo = useAuthSessionInfo();
+  console.log(sessionInfo);
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
