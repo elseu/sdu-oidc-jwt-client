@@ -172,7 +172,7 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
 
   receiveSessionToken(redirect = true): boolean {
     const match = window.location.search.match(/[?&]token=([^&]+)/);
-    if (!match) return false;
+    if (!match?.length) return false;
 
     this.setSessionToken(match[1]);
     if (redirect || typeof redirect === 'undefined') {

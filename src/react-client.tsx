@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useAsync } from 'react-use';
+import { AsyncState } from 'react-use/lib/useAsync';
 
 import { ClaimsBase, OidcJwtClient, oidcJwtClient, OidcJwtClientOptions } from './client';
 
@@ -114,10 +116,11 @@ export function useAuthControls(): OidcAuthControls {
   }), [client]);
 }
 
-export function useAuthUserInfo<T>(): T | null {
+export function useAuthUserInfo<T>(): AsyncState<T | null> {
   const client = useAuthClient();
   const sessionInfo = useAuthSessionInfo();
-  return usePromiseResult<T | null>(() => {
+
+  return useAsync<() => Promise<T | null>>(async () => {
     if (!sessionInfo.hasValidSession) {
       return Promise.resolve(null);
     }
@@ -125,10 +128,10 @@ export function useAuthUserInfo<T>(): T | null {
   }, [client, sessionInfo]);
 }
 
-export function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
+export function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
   const client = useAuthClient();
   const sessionInfo = useAuthSessionInfo();
-  return usePromiseResult<T | null>(() => {
+  return useAsync<() => Promise<T | null>>(async () => {
     if (!sessionInfo.hasValidSession) {
       return Promise.resolve(null);
     }
