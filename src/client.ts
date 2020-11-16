@@ -248,7 +248,7 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
       return Promise.resolve({ token: null, claims: null });
     }
     this.accessTokenCache = this.fetchJsonWithAuth<AccessTokenInfo<T>>(this.baseUrl + '/token')
-      .then(result => this.fetchAccessTokenSuccess<T>(result, fetchedAt), this.fetchAccessTokenError);
+      .then(result => this.fetchAccessTokenSuccess<T>(result, fetchedAt), error => this.fetchAccessTokenError(error));
     return this.accessTokenCache.then((result) => result.value);
   }
 
@@ -268,7 +268,7 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
     }
 
     this.userInfoCache = this.fetchJsonWithAuth<T>(this.baseUrl + '/userinfo')
-      .then(result => this.fetchUserInfoSuccess<T>(result), this.fetchUserInfoError);
+      .then(result => this.fetchUserInfoSuccess<T>(result), error => this.fetchUserInfoError(error));
     return this.userInfoCache;
   }
 
