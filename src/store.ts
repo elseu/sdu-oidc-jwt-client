@@ -114,7 +114,6 @@ export interface OidcJwtClientOptions {
 }
 
 const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
-const LOGGEDIN_STORAGE_KEY = 'oidc_jwt_loggedin';
 
 function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => ({
@@ -126,7 +125,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
     accessTokenCache: undefined,
     userInfoCache: undefined,
 
-    isLoggedIn: !!(localStorage.getItem(LOGGEDIN_STORAGE_KEY) || null),
     isLastAccessTokenInvalid: false,
     hasSessionToken: () => !!get().csrfToken,
     hasValidSession: () => {
