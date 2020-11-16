@@ -1,7 +1,6 @@
 import create, { UseStore } from 'zustand';
 
-import { buildQuerystring, HttpClient, HttpError, stripTokenFromUrl } from './utils';
-import { CSRF_TOKEN_STORAGE_KEY } from './utils/config';
+import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
 
 interface AnyObject {
   [key:string]: string
@@ -92,11 +91,15 @@ interface StoreMethods {
   fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>>;
   fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number): AccessTokenCache<T>;
   fetchAccessTokenError(error: HttpError): AccessTokenCache<any>;
+
+  /**
+   * Fetch wrapper
+   */
+  fetchJsonWithAuth<T>(url: string): Promise<T>
 }
 
 export type UseOidcJwtClientStore = {
-  client: HttpClient
-
+  baseUrl: string
   csrfToken: string | null
   defaultAuthConfig: AnyObject
   monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null
@@ -117,10 +120,11 @@ export interface OidcJwtClientOptions {
   defaultAuthConfig?: Params
 }
 
+const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
+
 function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => ({
-    client: new HttpClient({ baseUrl: options.url.replace(/\/$/, '') }),
-
+    baseUrl: options.url.replace(/\/$/, ''),
     csrfToken: localStorage.getItem(CSRF_TOKEN_STORAGE_KEY) || null,
     defaultAuthConfig: options.defaultAuthConfig || {},
     monitorAccessTokenTimeout: null,
@@ -137,22 +141,33 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
     },
 
     methods: {
+      fetchJsonWithAuth<T>(url: string): Promise<T> {
+        const { baseUrl, csrfToken } = get();
+
+        return fetch(baseUrl + url, {
+          headers: {
+            Authorization: 'Bearer ' + csrfToken,
+          },
+          credentials: 'include',
+        }).then<T>((response) => {
+          if (!response.ok) {
+            throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
+          }
+          return response.json();
+        });
+      },
 
       authorize(params: Params = {}) {
-        const { defaultAuthConfig, client } = get();
-        // eslint-disable-next-line max-len
-        const redirect_uri = defaultAuthConfig.redirect_uri || params.redirect_uri || stripTokenFromUrl(window.location.href);
-
-        const queryParams = {
-          ...defaultAuthConfig,
-          ...params,
-          redirect_uri,
-        };
-        window.location.href = client.getBaseUrl() + '/authorize?' + buildQuerystring(queryParams);
+        const { defaultAuthConfig, baseUrl } = get();
+        const queryParams = { ...defaultAuthConfig, ...params };
+        if (!queryParams.redirect_uri) {
+          queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
+        }
+        window.location.href = baseUrl + '/authorize?' + buildQuerystring(queryParams);
       },
 
       logout: (params: Params = {}) => {
-        const { client, methods: { removeSessionToken, setLoggedIn } } = get();
+        const { baseUrl, methods: { removeSessionToken, setLoggedIn } } = get();
         const queryParams = {
           ...params,
           post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
@@ -160,7 +175,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
 
         removeSessionToken();
         setLoggedIn(false);
-        window.location.href = client.getBaseUrl() + '/logout?' + buildQuerystring(queryParams);
+        window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
       },
 
       receiveSessionToken(redirect = true) {
@@ -171,7 +186,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
 
         setSessionToken(match[1]);
 
-        if (!redirect) {
+        if (redirect) {
           // TODO: Still need to figure out why #. is appearing in url
           window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
         }
@@ -189,7 +204,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         }
 
         if (cache.validUntil && cache.validUntil > now) {
-          // setLoggedIn(true);
           return cache.value;
         }
 
@@ -251,17 +265,13 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       setSessionToken(token: string): void {
-        const { client } = get();
         set({ csrfToken: token });
-        client.setToken(token);
         localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
       },
 
       removeSessionToken(): void {
-        const { client } = get();
         // Save token to store, HttpClient and localStorage
         set({ csrfToken: null });
-        client.setToken(null);
         localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
       },
 
@@ -270,7 +280,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       fetchUserInfo<T>(): Promise<T | null> {
-        const { csrfToken, client } = get();
+        const { csrfToken, methods: { fetchJsonWithAuth } } = get();
 
         if (!csrfToken) {
           return Promise.resolve(null);
@@ -283,7 +293,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
           return null;
         };
 
-        const userInfoCache = client.get<T>('/userinfo').then(result => result, userInfoCacheError);
+        const userInfoCache = fetchJsonWithAuth<T>('/userinfo').then(result => result, userInfoCacheError);
 
         set({ userInfoCache });
 
@@ -291,7 +301,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
       },
 
       fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
-        const { csrfToken, methods, client } = get();
+        const { csrfToken, methods, methods: { fetchJsonWithAuth } } = get();
         const { fetchAccessTokenSuccess, fetchAccessTokenError } = methods;
 
         const fetchedAt = new Date().getTime();
@@ -299,7 +309,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
           return Promise.resolve({ token: null, claims: null });
         }
 
-        const accessTokenCache = client.get<AccessTokenInfo<T>>('/token').then(
+        const accessTokenCache = fetchJsonWithAuth<AccessTokenInfo<T>>('/token').then(
           result => fetchAccessTokenSuccess<T>(result, fetchedAt),
           fetchAccessTokenError,
         );
