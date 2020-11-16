@@ -259,7 +259,12 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
     return this.userInfoCache;
   }
 
-  private setMonitorAccessTokenTimeout(cache: AccessTokenCache<any>): void {
+  updateToken(): void {
+    this.fetchAccessToken();
+    this.accessTokenCache?.then((cache) => this.setMonitorAccessTokenTimeout(cache));
+  }
+
+  setMonitorAccessTokenTimeout(cache: AccessTokenCache<any>): void {
     if (!cache.validUntil) return;
 
     // Update the token some 10 seconds before it expires.
@@ -268,12 +273,7 @@ class OidcJwtClientImpl extends EventEmitter implements OidcJwtClient {
     const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
 
     // Set a timeout to fetch a new token in X seconds.
-    this.monitorAccessTokenTimeout = setTimeout(this.updateToken, timeoutMs);
-  }
-
-  private updateToken(): void {
-    this.fetchAccessToken();
-    this.accessTokenCache?.then((cache) => this.setMonitorAccessTokenTimeout(cache));
+    this.monitorAccessTokenTimeout = setTimeout(() => this.updateToken(), timeoutMs);
   }
 
   monitorAccessToken(): void {
