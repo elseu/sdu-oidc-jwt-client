@@ -79,7 +79,6 @@ export class HttpClient {
     };
 
     this.setAuthenticationHeaders(config);
-    console.log(config);
 
     const { baseUrl = '' } = config;
     const requestFn = fetch(baseUrl + url, config)

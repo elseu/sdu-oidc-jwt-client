@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
+import { State, usePromiseResult } from './utils/usePromiseResult';
 
 interface OidcAuthControls {
   authorize(params?: Params): void;
@@ -14,20 +13,6 @@ interface OidcAuthSessionInfo {
   hasValidSession: boolean;
 }
 
-function usePromiseResult<T>(
-  f: () => Promise<T> | null,
-  deps: unknown[],
-): T | null {
-  const [value, setValue] = useState<T | null>(null);
-  useEffect(() => {
-    f()?.then((result) => {
-      setValue(result);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return value;
-}
-
 function useAuthControls(): OidcAuthControls {
   const { useStore } = useOidcJwtContext();
   const authorize = useStore(state => state.methods.authorize);
@@ -35,7 +20,7 @@ function useAuthControls(): OidcAuthControls {
   return { authorize, logout };
 }
 
-function useAuthUserInfo<T>(): T | null {
+function useAuthUserInfo<T>(): State<T | null> {
   const { useStore } = useOidcJwtContext();
   const getUserInfo = useStore(state => state.methods.getUserInfo);
   const { hasValidSession } = useAuthSessionInfo();
@@ -48,7 +33,7 @@ function useAuthUserInfo<T>(): T | null {
   }, []);
 }
 
-function useAuthAccessClaims<T extends ClaimsBase>(): T | null {
+function useAuthAccessClaims<T extends ClaimsBase>(): State<T | null> {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
   const { hasValidSession } = useAuthSessionInfo();

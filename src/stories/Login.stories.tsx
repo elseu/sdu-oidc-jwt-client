@@ -83,14 +83,13 @@ interface Claims {
 
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
-  const userInfo = useAuthUserInfo<UserInfo>();
+  const { data: userInfo } = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
-  const claims = useAuthAccessClaims<Claims>();
+  const { data: claims } = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
   const sessionInfo = useAuthSessionInfo();
-  console.log(sessionInfo);
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -159,6 +158,8 @@ const Content = (props: ContentProps) => {
       <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
       <h1>Access token claims</h1>
       <LargeTextArea value={JSON.stringify(claims, undefined, 4)}></LargeTextArea>
+      <h1>Session Info</h1>
+      <LargeTextArea value={JSON.stringify(sessionInfo, undefined, 4)}></LargeTextArea>
     </>
   );
 };
