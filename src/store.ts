@@ -85,6 +85,12 @@ interface StoreMethods {
   setLoggedIn(isLoggedIn: boolean): void;
 
   /**
+   * Remove our logged in state
+   * @param {boolean} isLoggedIn
+   */
+  removeLoggedIn(): void;
+
+  /**
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
@@ -121,6 +127,7 @@ export interface OidcJwtClientOptions {
 }
 
 const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
+const LOGGEDIN_STORAGE_KEY = 'oidc_jwt_loggedin';
 
 function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => ({
@@ -132,7 +139,7 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
     accessTokenCache: undefined,
     userInfoCache: undefined,
 
-    isLoggedIn: false,
+    isLoggedIn: !!(localStorage.getItem(LOGGEDIN_STORAGE_KEY) || null),
     isLastAccessTokenInvalid: false,
     hasSessionToken: () => !!get().csrfToken,
     hasValidSession: () => {
@@ -264,6 +271,16 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         clearTimeout(monitorAccessTokenTimeout);
       },
 
+      setLoggedIn(isLoggedIn: boolean): void {
+        set({ isLoggedIn });
+        localStorage.setItem(LOGGEDIN_STORAGE_KEY, isLoggedIn.toString());
+      },
+
+      removeLoggedIn(): void {
+        set({ isLoggedIn: false });
+        localStorage.removeItem(LOGGEDIN_STORAGE_KEY);
+      },
+
       setSessionToken(token: string): void {
         set({ csrfToken: token });
         localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
@@ -273,10 +290,6 @@ function createOidcJwtClientStore (options: OidcJwtClientOptions): UseStore<UseO
         // Save token to store, HttpClient and localStorage
         set({ csrfToken: null });
         localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
-      },
-
-      setLoggedIn(isLoggedIn: boolean): void {
-        set({ isLoggedIn });
       },
 
       fetchUserInfo<T>(): Promise<T | null> {
