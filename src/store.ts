@@ -27,11 +27,8 @@ interface AccessTokenCache<T extends ClaimsBase> {
 interface StoreMethods {
   logout: (params?: Params) => void;
   authorize: (params?: Params) => void;
-  reset: () => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
-
-  setShouldSkipAttemptLogin(skip: boolean): void;
 
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
@@ -116,7 +113,6 @@ export type UseOidcJwtClientStore = {
   userInfoCache: any
   userInfo: any
 
-  shouldSkipAttemptLogin: boolean
   isLoggedIn: boolean
 
   methods: StoreMethods
@@ -130,20 +126,16 @@ export interface OidcJwtClientOptions {
 const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
-const SHOULD_SKIP_ATTEMPT_LOGIN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_should_skip_attempt_login';
 
 function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
     const isLoggedInPersistentValue = localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY);
     const userInfoPersistentValue = localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY);
-    const shouldSkipAttemptLoginPersistentValue = localStorage.getItem(SHOULD_SKIP_ATTEMPT_LOGIN_TOKEN_STORAGE_KEY);
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
       csrfToken: localStorage.getItem(CSRF_TOKEN_STORAGE_KEY) || null,
       defaultAuthConfig: options.defaultAuthConfig || {},
       monitorAccessTokenTimeout: null,
-      shouldSkipAttemptLogin: shouldSkipAttemptLoginPersistentValue
-        ? (JSON.parse(shouldSkipAttemptLoginPersistentValue)) : false,
       accessTokenCache: undefined,
       userInfoCache: undefined,
       userInfo: userInfoPersistentValue ? JSON.parse(userInfoPersistentValue) : undefined,
@@ -152,12 +144,6 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       isLoggedIn: isLoggedInPersistentValue ? JSON.parse(isLoggedInPersistentValue) : false,
 
       methods: {
-        setShouldSkipAttemptLogin(skip: boolean) {
-          localStorage.setItem(SHOULD_SKIP_ATTEMPT_LOGIN_TOKEN_STORAGE_KEY, JSON.stringify(skip));
-          set({
-            shouldSkipAttemptLogin: skip,
-          });
-        },
         setIsLoggedIn(loggedIn: boolean) {
           localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(loggedIn));
           set({
@@ -190,22 +176,15 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.location.href = baseUrl + '/authorize?' + buildQuerystring(queryParams);
         },
 
-        reset: () => {
-          localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
-          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
-          // We don't reset this one? because other wise by logout directly does a login attempt again.
-          localStorage.removeItem(SHOULD_SKIP_ATTEMPT_LOGIN_TOKEN_STORAGE_KEY);
-        },
-
         logout: (params: Params = {}) => {
-          const { baseUrl, methods: { reset } } = get();
+          const { baseUrl } = get();
           const queryParams = {
             ...params,
             post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
           };
 
-          reset();
+          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 

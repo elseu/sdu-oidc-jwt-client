@@ -45,8 +45,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   } = useStore(state => state.methods);
 
   const isLoggedIn = useStore(state => state.isLoggedIn);
-  const shouldSkipAttemptLogin = useStore(state => state.shouldSkipAttemptLogin);
-  const setShouldSkipAttemptLogin = useStore(state => state.methods.setShouldSkipAttemptLogin);
+  const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
   useEffect(() => {
     receiveSessionToken();
   }, [receiveSessionToken]);
@@ -60,10 +59,9 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
-    if (isLoggedIn || !shouldAttemptLogin || shouldSkipAttemptLogin) return;
-    setShouldSkipAttemptLogin(true);
+    if (isLoggedIn || !shouldAttemptLogin || isCSRFTokenPresent) return;
     authorize({ prompt: 'none' });
-  }, [authorize, isLoggedIn, shouldAttemptLogin, shouldSkipAttemptLogin]);
+  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent]);
 
   const context: OidcJwtContextData = useMemo(() => ({ useStore }), [useStore]);
 
