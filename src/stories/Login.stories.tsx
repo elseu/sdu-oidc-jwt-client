@@ -5,7 +5,7 @@ import {
   useAuthAccessClaims,
   useAuthAccessToken,
   useAuthControls,
-  useAuthSessionInfo,
+  useAuthIsLoggedIn,
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
@@ -44,7 +44,7 @@ interface UserInfo {
   email: string
   givenName: string
   login: string
-  name:string
+  name: string
   sn: string
   sub: string
   updated_at: number
@@ -89,7 +89,7 @@ const Content = (props: ContentProps) => {
   const { value: claims } = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
-  const sessionInfo = useAuthSessionInfo();
+  const isLoggedIn = useAuthIsLoggedIn();
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -132,14 +132,14 @@ const Content = (props: ContentProps) => {
   return (
     <>
       <div>
-        {claims && <button onClick={onClickLogout}>Log out</button>}
-        {claims && (
+        {isLoggedIn && <button onClick={onClickLogout}>Log out</button>}
+        {isLoggedIn && (
           <button onClick={onClickFetchToken}>Fetch token</button>
         )}
-        {claims && testApiUrl && (
+        {isLoggedIn && testApiUrl && (
           <button onClick={onClickCallApi}>Call API</button>
         )}
-        {!claims && <button onClick={onClickLogin}>Log in</button>}
+        {!isLoggedIn && <button onClick={onClickLogin}>Log in</button>}
         {token && (
           <>
             <h2>Token</h2>
@@ -158,8 +158,8 @@ const Content = (props: ContentProps) => {
       <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
       <h1>Access token claims</h1>
       <LargeTextArea value={JSON.stringify(claims, undefined, 4)}></LargeTextArea>
-      <h1>Session Info</h1>
-      <LargeTextArea value={JSON.stringify(sessionInfo, undefined, 4)}></LargeTextArea>
+      <h1>User is logged in?</h1>
+      <LargeTextArea value={JSON.stringify(isLoggedIn, undefined, 4)}></LargeTextArea>
     </>
   );
 };

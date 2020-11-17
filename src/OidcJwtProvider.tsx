@@ -44,26 +44,26 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     stopMonitoringAccessToken,
   } = useStore(state => state.methods);
 
-  const hasSessionToken = useStore(state => state.hasSessionToken);
-  const hasSession = hasSessionToken();
-
+  const isLoggedIn = useStore(state => state.isLoggedIn);
+  const shouldSkipAttemptLogin = useStore(state => state.shouldSkipAttemptLogin);
+  const setShouldSkipAttemptLogin = useStore(state => state.methods.setShouldSkipAttemptLogin);
   useEffect(() => {
     receiveSessionToken();
   }, [receiveSessionToken]);
 
   useEffect(() => {
-    if (!hasSession || !shouldMonitorAccessTokens) return;
+    if (!isLoggedIn) return;
 
     monitorAccessToken();
 
     return () => stopMonitoringAccessToken();
-  }, [hasSession, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
+  }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
-    if (hasSession || !shouldAttemptLogin) return;
-    console.log('authorize');
+    if (isLoggedIn || !shouldAttemptLogin || shouldSkipAttemptLogin) return;
+    setShouldSkipAttemptLogin(true);
     authorize({ prompt: 'none' });
-  }, [authorize, hasSession, shouldAttemptLogin]);
+  }, [authorize, isLoggedIn, shouldAttemptLogin, shouldSkipAttemptLogin]);
 
   const context: OidcJwtContextData = useMemo(() => ({ useStore }), [useStore]);
 

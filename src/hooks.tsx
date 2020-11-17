@@ -3,14 +3,11 @@ import { AsyncState } from 'react-use/lib/useAsync';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
+
 interface OidcAuthControls {
   authorize(params?: Params): void;
-  logout(params?: Params): void;
-}
 
-interface OidcAuthSessionInfo {
-  hasSession: boolean;
-  hasValidSession: boolean;
+  logout(params?: Params): void;
 }
 
 function useAuthControls(): OidcAuthControls {
@@ -23,38 +20,33 @@ function useAuthControls(): OidcAuthControls {
 function useAuthUserInfo<T>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
   const getUserInfo = useStore(state => state.methods.getUserInfo);
-  const { hasValidSession } = useAuthSessionInfo();
+
+  const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
-    if (!hasValidSession) {
+    if (!isLoggedIn) {
       return Promise.resolve(null);
     }
     return getUserInfo<T>();
-  }, [hasValidSession]);
+  }, [isLoggedIn]);
 }
 
 function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
-  const { hasValidSession } = useAuthSessionInfo();
+  const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
-    if (!hasValidSession) {
+    if (!isLoggedIn) {
       return Promise.resolve(null);
     }
     return getAccessToken<T>().then(info => info?.claims ?? null);
-  }, [hasValidSession]);
+  }, [isLoggedIn]);
 }
 
-function useAuthSessionInfo(): OidcAuthSessionInfo {
+function useAuthIsLoggedIn(): boolean {
   const { useStore } = useOidcJwtContext();
-  const hasSession = useStore(state => state.hasSessionToken());
-  const hasValidSession = useStore(state => state.hasValidSession());
-
-  return {
-    hasSession,
-    hasValidSession,
-  };
+  return useStore(state => state.isLoggedIn);
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
@@ -67,6 +59,6 @@ export {
   useAuthControls,
   useAuthUserInfo,
   useAuthAccessClaims,
-  useAuthSessionInfo,
+  useAuthIsLoggedIn,
   useAuthAccessToken,
 };
