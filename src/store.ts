@@ -226,7 +226,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null> {
-          const { accessTokenCache, methods: { fetchAccessToken }, methods: { validateAccessTokenCache } } = get();
+          const { accessTokenCache, methods: { fetchAccessToken, validateAccessTokenCache } } = get();
 
           if (!accessTokenCache) {
             return fetchAccessToken<T>();
