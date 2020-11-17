@@ -66,12 +66,10 @@ const Content = (props: ContentProps) => {
     fetchAccessToken().then((token) => {
       if (!token) {
         alert('No token!');
-        setApiResult(null);
-        return;
       }
       fetch(testApiUrl, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
         .then((response) => response.json())
@@ -96,7 +94,7 @@ const Content = (props: ContentProps) => {
         {claims && (
           <button onClick={onClickFetchToken}>Fetch token</button>
         )}
-        {claims && testApiUrl && (
+        {testApiUrl && (
           <button onClick={onClickCallApi}>Call API</button>
         )}
         {!claims && <button onClick={onClickLogin}>Log in</button>}
