@@ -65,6 +65,7 @@ const claims = useAuthAccessClaims();
 console.log('This are the claims: ', claims)
 ```
 
+
 ### Check session
 To check if there is a session and for example show a loader when there's not yet one:
 
