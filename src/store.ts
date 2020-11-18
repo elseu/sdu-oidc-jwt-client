@@ -194,12 +194,13 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           if (!match?.length) return;
 
           setSessionToken(match[1]);
-          getUserInfo().finally(() => {
-            if (redirect) {
-              // TODO: Still need to figure out why #. is appearing in url
-              window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-            }
-          });
+          getUserInfo()
+            .finally(() => {
+              if (redirect) {
+                // TODO: Still need to figure out why #. is appearing in url
+                window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
+              }
+            });
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
@@ -243,9 +244,8 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         getUserInfo<T>(): Promise<T | null> {
-          const { userInfoCache, userInfo, methods: { fetchUserInfo, setUserInfo } } = get();
-
-          if (userInfo) {
+          const { userInfoCache, userInfo, isLoggedIn, methods: { fetchUserInfo, setUserInfo, setIsLoggedIn } } = get();
+          if (isLoggedIn && userInfo) {
             return Promise.resolve(userInfo);
           }
 
@@ -255,6 +255,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
           return fetchUserInfo<T>().then((data) => {
             if (data) setUserInfo<T>(data);
+            setIsLoggedIn(true);
             return Promise.resolve(data);
           });
         },
