@@ -68,6 +68,15 @@
   "peerDependencies": {
     "react": "^16.13.1"
   },
+  "release": {
+    "branches": [
+      "master",
+      {
+        "name": "develop",
+        "prerelease": true
+      }
+    ]
+  },
   "browserslist": {
     "production": [
       ">0.2%",
