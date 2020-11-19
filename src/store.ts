@@ -194,13 +194,14 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           if (!match?.length) return;
 
           setSessionToken(match[1]);
+
+          const userInfoHandler = redirect ? () => {
+            window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
+          } : () => null;
+
           getUserInfo()
-            .finally(() => {
-              if (redirect) {
-                // TODO: Still need to figure out why #. is appearing in url
-                window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-              }
-            });
+            .then(userInfoHandler)
+            .catch(userInfoHandler);
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
