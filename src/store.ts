@@ -1,6 +1,7 @@
 import create, { UseStore } from 'zustand';
 
 import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
+import { parseJson } from './utils/parseJson';
 
 interface AnyObject {
   [key: string]: string
@@ -138,10 +139,10 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
       userInfoCache: undefined,
-      userInfo: userInfoPersistentValue ? JSON.parse(userInfoPersistentValue) : undefined,
+      userInfo: userInfoPersistentValue ? parseJson(userInfoPersistentValue) : undefined,
 
       isLastAccessTokenInvalid: false,
-      isLoggedIn: isLoggedInPersistentValue ? JSON.parse(isLoggedInPersistentValue) : false,
+      isLoggedIn: isLoggedInPersistentValue ? parseJson(isLoggedInPersistentValue) : false,
 
       methods: {
         setIsLoggedIn(loggedIn: boolean) {
