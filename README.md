@@ -53,16 +53,16 @@ const onClickLogin = React.useCallback(() => {
 To get the user info you can do this within the context of the provider:
 
 ```javascript
-const userInfo = useAuthUserInfo();
-console.log('This is the userInfo: ', userInfo)
+const  { value, loading } = useAuthUserInfo();
+console.log('This is the userInfo: ', value)
 ```
 
 ### Get the Claims
 To get the claims you can do this within the context of the provider:
 
 ```javascript
-const claims = useAuthAccessClaims();
-console.log('This are the claims: ', claims)
+const  { value, loading } = useAuthAccessClaims();
+console.log('This are the claims: ', value)
 ```
 
 
