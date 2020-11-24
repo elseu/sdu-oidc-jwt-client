@@ -129,12 +129,13 @@ const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
 function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
+  const isSSR = typeof (localStorage) !== 'undefined';
   return create<UseOidcJwtClientStore>((set, get) => {
-    const isLoggedInPersistentValue = localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-    const userInfoPersistentValue = localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY);
+    const isLoggedInPersistentValue = !isSSR ? localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY) : undefined;
+    const userInfoPersistentValue = !isSSR ? localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY) : undefined;
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
-      csrfToken: localStorage.getItem(CSRF_TOKEN_STORAGE_KEY) || null,
+      csrfToken: (!isSSR && localStorage.getItem(CSRF_TOKEN_STORAGE_KEY)) || null,
       defaultAuthConfig: options.defaultAuthConfig || {},
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
@@ -146,7 +147,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
       methods: {
         setIsLoggedIn(loggedIn: boolean) {
-          localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(loggedIn));
+          if (!isSSR) localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(loggedIn));
           set({
             isLoggedIn: loggedIn,
             ...(!loggedIn ? { userInfoCache: undefined } : {}),
@@ -184,8 +185,8 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
           };
 
-          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
+          if (!isSSR) localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
+          if (!isSSR) localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 
@@ -241,7 +242,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         setUserInfo<T>(userInfo: T) {
-          localStorage.setItem(USER_INFO_TOKEN_STORAGE_KEY, JSON.stringify(userInfo));
+          if (!isSSR) localStorage.setItem(USER_INFO_TOKEN_STORAGE_KEY, JSON.stringify(userInfo));
           set({ userInfo });
         },
 
@@ -256,8 +257,10 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           }
 
           return fetchUserInfo<T>().then((data) => {
-            if (data) setUserInfo<T>(data);
-            setIsLoggedIn(true);
+            if (data) {
+              setUserInfo<T>(data);
+              setIsLoggedIn(true);
+            }
             return Promise.resolve(data);
           });
         },
@@ -291,13 +294,13 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
         setSessionToken(token: string): void {
           set({ csrfToken: token });
-          localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
+          if (!isSSR) localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
         },
 
         removeSessionToken(): void {
           // Save token to store, HttpClient and localStorage
           set({ csrfToken: null });
-          localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
+          if (!isSSR) localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
         },
 
         fetchUserInfo<T>(): Promise<T | null> {
@@ -344,23 +347,22 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           const { claims, token } = value;
           const { methods: { setIsLoggedIn } } = get();
 
-          setIsLoggedIn(true);
-
           if (token && claims && typeof claims.iat === 'number' && typeof claims.exp === 'number') {
             const validUntil = fetchedAt + 1000 * (claims.exp - claims.iat);
+            setIsLoggedIn(true);
             return { value, validUntil, isError: false };
           }
 
+          setIsLoggedIn(false);
           return { value, validUntil: null, isError: false };
         },
 
-        fetchAccessTokenError(error: HttpError): AccessTokenCache<any> {
+        fetchAccessTokenError(_error: HttpError): AccessTokenCache<any> {
           const response = { value: { token: null, claims: null }, validUntil: null, isError: true };
           const { methods: { setIsLoggedIn } } = get();
 
-          if (error.statusCode === 403) {
-            setIsLoggedIn(false);
-          }
+          setIsLoggedIn(false);
+
           return response;
         },
       },
