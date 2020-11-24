@@ -30,7 +30,6 @@
     "@storybook/addon-essentials": "^6.0.21",
     "@storybook/addon-links": "^6.0.21",
     "@storybook/react": "^6.0.21",
-    "@types/events": "3.0.0",
     "@types/react": "^16.9.49",
     "@typescript-eslint/eslint-plugin": "^3.10.1",
     "@typescript-eslint/parser": "^3.10.1",
