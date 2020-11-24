@@ -31,10 +31,10 @@
     "@storybook/addon-links": "^6.0.21",
     "@storybook/react": "^6.0.21",
     "@types/react": "^16.9.49",
-    "@types/events": "3.0.0",
     "@typescript-eslint/eslint-plugin": "^3.10.1",
     "@typescript-eslint/parser": "^3.10.1",
     "babel-loader": "^8.1.0",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^6.8.0",
     "eslint-config-react-app": "^5.2.1",
     "eslint-config-standard": "^14.1.1",
@@ -67,6 +67,15 @@
   "peerDependencies": {
     "react": "^16.13.1"
   },
+  "release": {
+    "branches": [
+      "master",
+      {
+        "name": "develop",
+        "prerelease": true
+      }
+    ]
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -96,6 +105,7 @@
     }
   },
   "dependencies": {
-    "events": "^3.2.0"
+    "react-use": "^15.3.4",
+    "zustand": "^3.1.4"
   }
 }

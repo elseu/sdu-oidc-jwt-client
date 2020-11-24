@@ -53,22 +53,23 @@ const onClickLogin = React.useCallback(() => {
 To get the user info you can do this within the context of the provider:
 
 ```javascript
-const userInfo = useAuthUserInfo();
-console.log('This is the userInfo: ', userInfo)
+const  { value, loading } = useAuthUserInfo();
+console.log('This is the userInfo: ', value)
 ```
 
 ### Get the Claims
 To get the claims you can do this within the context of the provider:
 
 ```javascript
-const claims = useAuthAccessClaims();
-console.log('This are the claims: ', claims)
+const  { value, loading } = useAuthAccessClaims();
+console.log('This are the claims: ', value)
 ```
 
-### Check session
-To check if there is a session and for example show a loader when there's not yet one:
+
+### Check if a user is logged in.
+Checking if the user is logged in so that you can act on it.
 
 ```javascript
-const sessionInfo = useAuthSessionInfo();
-console.log('There is a session started: ', sessionInfo.hasSession)
+const isLoggedIn = useAuthIsLoggedIn();
+console.log('Is the user loggedin? ', isLoggedIn)
 ```

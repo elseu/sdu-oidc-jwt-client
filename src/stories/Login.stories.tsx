@@ -2,12 +2,13 @@ import { Meta, Story } from '@storybook/react';
 import React, { useState } from 'react';
 
 import {
-  OidcJwtProvider,
   useAuthAccessClaims,
   useAuthAccessToken,
   useAuthControls,
+  useAuthIsLoggedIn,
   useAuthUserInfo,
-} from '../react-client';
+} from '../hooks';
+import { OidcJwtProvider } from '../OidcJwtProvider';
 
 interface TemplateProps {
   url: string;
@@ -43,7 +44,7 @@ interface UserInfo {
   email: string
   givenName: string
   login: string
-  name:string
+  name: string
   sn: string
   sub: string
   updated_at: number
@@ -82,12 +83,13 @@ interface Claims {
 
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
-  const userInfo = useAuthUserInfo<UserInfo>();
+  const { value: userInfo } = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
-  const claims = useAuthAccessClaims<Claims>();
+  const { value: claims } = useAuthAccessClaims<Claims>();
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
+  const isLoggedIn = useAuthIsLoggedIn();
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -103,14 +105,9 @@ const Content = (props: ContentProps) => {
     }
 
     fetchAccessToken().then((token) => {
-      if (!token) {
-        alert('No token!');
-        setApiResult(null);
-        return;
-      }
       fetch(testApiUrl, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
         .then((response) => response.json())
@@ -127,18 +124,17 @@ const Content = (props: ContentProps) => {
   const onClickLogin = React.useCallback(() => {
     authorize();
   }, [authorize]);
-
   return (
     <>
       <div>
-        {claims && <button onClick={onClickLogout}>Log out</button>}
-        {claims && (
+        {isLoggedIn && <button onClick={onClickLogout}>Log out</button>}
+        {isLoggedIn && (
           <button onClick={onClickFetchToken}>Fetch token</button>
         )}
-        {claims && testApiUrl && (
+        {testApiUrl && (
           <button onClick={onClickCallApi}>Call API</button>
         )}
-        {!claims && <button onClick={onClickLogin}>Log in</button>}
+        {!isLoggedIn && <button onClick={onClickLogin}>Log in</button>}
         {token && (
           <>
             <h2>Token</h2>
@@ -157,6 +153,8 @@ const Content = (props: ContentProps) => {
       <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
       <h1>Access token claims</h1>
       <LargeTextArea value={JSON.stringify(claims, undefined, 4)}></LargeTextArea>
+      <h1>User is logged in?</h1>
+      <LargeTextArea value={JSON.stringify(isLoggedIn, undefined, 4)}></LargeTextArea>
     </>
   );
 };
