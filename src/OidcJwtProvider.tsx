@@ -44,6 +44,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     stopMonitoringAccessToken,
   } = useStore(state => state.methods);
 
+  const isSSR = typeof (localStorage) === 'undefined';
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
   useEffect(() => {
@@ -59,9 +60,9 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
-    if (isLoggedIn || !shouldAttemptLogin || isCSRFTokenPresent) return;
+    if (isSSR || isLoggedIn || !shouldAttemptLogin || isCSRFTokenPresent) return;
     authorize({ prompt: 'none' });
-  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent]);
+  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent, isSSR]);
 
   const context: OidcJwtContextData = useMemo(() => ({ useStore }), [useStore]);
 
