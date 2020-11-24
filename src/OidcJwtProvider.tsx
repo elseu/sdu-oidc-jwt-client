@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useRef } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { UseStore } from 'zustand';
 
 import { createOidcJwtClientStore, OidcJwtClientOptions, UseOidcJwtClientStore } from './store';
@@ -31,11 +31,14 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     children,
   } = props;
 
-  const useStoreRef = useRef<UseStore<UseOidcJwtClientStore>>();
-  if (!useStoreRef.current) {
-    useStoreRef.current = createOidcJwtClientStore(options);
+  const contextRef = useRef<OidcJwtContextData>();
+  if (!contextRef.current) {
+    contextRef.current = {
+      useStore: createOidcJwtClientStore(options),
+    };
   }
-  const useStore = useStoreRef.current;
+
+  const { useStore } = contextRef.current;
 
   const {
     authorize,
@@ -64,9 +67,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     authorize({ prompt: 'none' });
   }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent, isSSR]);
 
-  const context: OidcJwtContextData = useMemo(() => ({ useStore }), [useStore]);
-
-  return <OidcJwtContext.Provider value={context}>{children}</OidcJwtContext.Provider>;
+  return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };
 
 export { useOidcJwtContext, OidcJwtProvider };
