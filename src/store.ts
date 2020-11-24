@@ -3,11 +3,9 @@ import create, { UseStore } from 'zustand';
 import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
 import { parseJson } from './utils/parseJson';
 
-interface AnyObject {
+export interface Params {
   [key: string]: string
 }
-
-export type Params = AnyObject
 
 export interface ClaimsBase {
   iat: number
@@ -107,7 +105,7 @@ interface StoreMethods {
 export type UseOidcJwtClientStore = {
   baseUrl: string
   csrfToken: string | null
-  defaultAuthConfig: AnyObject
+  defaultAuthConfig: Params
   monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null
 
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;

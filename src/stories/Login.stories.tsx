@@ -105,9 +105,6 @@ const Content = (props: ContentProps) => {
     }
 
     fetchAccessToken().then((token) => {
-      if (!token) {
-        alert('No token!');
-      }
       fetch(testApiUrl, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
