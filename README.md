@@ -66,10 +66,10 @@ console.log('This are the claims: ', claims)
 ```
 
 
-### Check session
-To check if there is a session and for example show a loader when there's not yet one:
+### Check if a user is logged in.
+Checking if the user is logged in so that you can act on it.
 
 ```javascript
-const sessionInfo = useAuthSessionInfo();
-console.log('There is a session started: ', sessionInfo.hasSession)
+const isLoggedIn = useAuthIsLoggedIn();
+console.log('Is the user loggedin? ', isLoggedIn)
 ```
