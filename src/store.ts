@@ -127,7 +127,7 @@ const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
 function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
-  const isSSR = typeof (localStorage) !== 'undefined';
+  const isSSR = typeof (localStorage) === 'undefined';
   return create<UseOidcJwtClientStore>((set, get) => {
     const isLoggedInPersistentValue = !isSSR ? localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY) : undefined;
     const userInfoPersistentValue = !isSSR ? localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY) : undefined;
