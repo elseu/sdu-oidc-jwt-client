@@ -191,6 +191,9 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         receiveSessionToken(redirect = true) {
           const { methods: { setSessionToken, getUserInfo } } = get();
           const match = window.location.search.match(/[?&]token=([^&]+)/) || [];
+
+          const getUserInfoPromise = getUserInfo();
+
           if (!match?.length) return;
 
           setSessionToken(match[1]);
@@ -199,7 +202,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
           } : () => null;
 
-          getUserInfo()
+          getUserInfoPromise
             .then(userInfoHandler)
             .catch(userInfoHandler);
         },
