@@ -258,7 +258,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           }
 
           return fetchUserInfo<T>().then((data) => {
-            if (data) {
+            if (data && Object.keys(data).length) {
               setUserInfo<T>(data);
               setIsLoggedIn(true);
             }
