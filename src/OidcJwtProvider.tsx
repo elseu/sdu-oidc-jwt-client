@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef } from 'react';
 import { UseStore } from 'zustand';
 
 import { createOidcJwtClientStore, OidcJwtClientOptions, UseOidcJwtClientStore } from './store';
+import { isSSR } from './utils/isSSR';
 
 interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
@@ -47,7 +48,6 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     stopMonitoringAccessToken,
   } = useStore(state => state.methods);
 
-  const isSSR = typeof (localStorage) === 'undefined';
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
   useEffect(() => {
@@ -65,7 +65,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   useEffect(() => {
     if (isSSR || isLoggedIn || !shouldAttemptLogin || isCSRFTokenPresent) return;
     authorize({ prompt: 'none' });
-  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent, isSSR]);
+  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent]);
 
   return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };

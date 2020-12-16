@@ -1,6 +1,7 @@
 import create, { UseStore } from 'zustand';
 
 import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
+import { isSSR } from './utils/isSSR';
 import { parseJson } from './utils/parseJson';
 
 export interface Params {
@@ -127,7 +128,6 @@ const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
 function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
-  const isSSR = typeof (localStorage) === 'undefined';
   return create<UseOidcJwtClientStore>((set, get) => {
     const isLoggedInPersistentValue = !isSSR ? localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY) : undefined;
     const userInfoPersistentValue = !isSSR ? localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY) : undefined;
@@ -183,14 +183,15 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
           };
 
-          if (!isSSR) localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-          if (!isSSR) localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
+          if (isSSR) return;
+          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 
         receiveSessionToken(redirect = true) {
           const { methods: { setSessionToken, getUserInfo } } = get();
-          const match = window.location.search.match(/[?&]token=([^&]+)/) || [];
+          const match = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
           const getUserInfoPromise = getUserInfo();
 
@@ -311,10 +312,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             return Promise.resolve(null);
           }
 
-          const userInfoCacheError = (error: HttpError) => {
-            if (error.statusCode === 403) {
-              throw new Error('Unknown error fetching userinfo');
-            }
+          const userInfoCacheError = (_error: HttpError) => {
             return null;
           };
 
