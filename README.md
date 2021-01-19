@@ -73,3 +73,11 @@ Checking if the user is logged in so that you can act on it.
 const isLoggedIn = useAuthIsLoggedIn();
 console.log('Is the user loggedin? ', isLoggedIn)
 ```
+
+### Check if a user has a session
+Checking if the user has an active session
+
+```javascript
+const { hasSession } = useAuthSessionInfo();
+console.log('Does the user have a session? ', hasSession)
+```

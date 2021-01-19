@@ -6,6 +6,7 @@ import {
   useAuthAccessToken,
   useAuthControls,
   useAuthIsLoggedIn,
+  useAuthSessionInfo,
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
@@ -83,6 +84,7 @@ interface Claims {
 
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
+  const sessionInfo = useAuthSessionInfo();
   const { value: userInfo } = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
@@ -149,6 +151,8 @@ const Content = (props: ContentProps) => {
         )}
       </div>
       <hr />
+      <h1>Session info</h1>
+      <LargeTextArea value={JSON.stringify(sessionInfo, undefined, 4)}></LargeTextArea>
       <h1>User info</h1>
       <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
       <h1>Access token claims</h1>
