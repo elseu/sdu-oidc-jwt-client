@@ -4,10 +4,11 @@ import { UseStore } from 'zustand';
 import { createOidcJwtClientStore, OidcJwtClientOptions, UseOidcJwtClientStore } from './store';
 import { isSSR } from './utils/isSSR';
 
-interface OidcJwtProviderProps {
+export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
+  onInitialized?: (data: any | null) => void;
 }
 
 interface OidcJwtContextData {
@@ -29,6 +30,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     client: options,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
+    onInitialized,
     children,
   } = props;
 
@@ -43,7 +45,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   const {
     authorize,
-    receiveSessionToken,
+    loadInitialData,
     monitorAccessToken,
     stopMonitoringAccessToken,
   } = useStore(state => state.methods);
@@ -51,8 +53,10 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
   useEffect(() => {
-    receiveSessionToken();
-  }, [receiveSessionToken]);
+    loadInitialData().then(data => {
+      if (onInitialized) onInitialized(data);
+    });
+  }, [loadInitialData, onInitialized]);
 
   useEffect(() => {
     if (!isLoggedIn) return;

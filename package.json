@@ -105,7 +105,7 @@
     }
   },
   "dependencies": {
-    "react-use": "^15.3.4",
+    "react-use": "^15.3.8",
     "zustand": "^3.1.4"
   }
 }
