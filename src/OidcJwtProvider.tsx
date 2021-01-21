@@ -8,7 +8,6 @@ export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
-  onInitialized?: (data: any | null) => void;
 }
 
 interface OidcJwtContextData {
@@ -30,7 +29,6 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     client: options,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
-    onInitialized,
     children,
   } = props;
 
@@ -52,11 +50,10 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
+
   useEffect(() => {
-    loadInitialData().then(data => {
-      if (onInitialized) onInitialized(data);
-    });
-  }, [loadInitialData, onInitialized]);
+    loadInitialData();
+  }, [loadInitialData]);
 
   useEffect(() => {
     if (!isLoggedIn) return;

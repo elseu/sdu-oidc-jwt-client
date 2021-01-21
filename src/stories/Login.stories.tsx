@@ -5,6 +5,7 @@ import {
   useAuthAccessClaims,
   useAuthAccessToken,
   useAuthControls,
+  useAuthInitialized,
   useAuthIsLoggedIn,
   useAuthSessionInfo,
   useAuthUserInfo,
@@ -92,6 +93,7 @@ const Content = (props: ContentProps) => {
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
   const isLoggedIn = useAuthIsLoggedIn();
+  const initializedData = useAuthInitialized();
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -151,6 +153,8 @@ const Content = (props: ContentProps) => {
         )}
       </div>
       <hr />
+      <h1>Initialized data</h1>
+      <LargeTextArea value={JSON.stringify(initializedData, undefined, 4)}></LargeTextArea>
       <h1>Session info</h1>
       <LargeTextArea value={JSON.stringify(sessionInfo, undefined, 4)}></LargeTextArea>
       <h1>User info</h1>

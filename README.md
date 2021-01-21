@@ -81,3 +81,13 @@ Checking if the user has an active session
 const { hasSession } = useAuthSessionInfo();
 console.log('Does the user have a session? ', hasSession)
 ```
+
+### Get the initialized data
+Checks when the loadInitialData function load on is done executing and will return with the claims or null,
+depending on if you were logged in or logged out on initialization.
+Default is undefined.
+
+```javascript
+const initializedData = useAuthInitialized();
+console.log('This is the initialized data: ', initializedData)
+```

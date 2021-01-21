@@ -61,6 +61,11 @@ function useAuthAccessToken(): { (): Promise<string | null> } {
   return () => getAccessToken().then(result => result?.token ?? null);
 }
 
+function useAuthInitialized(): any {
+  const { useStore } = useOidcJwtContext();
+  return useStore(state => state.initializedData);
+}
+
 export {
   useAuthControls,
   useAuthUserInfo,
@@ -68,4 +73,5 @@ export {
   useAuthIsLoggedIn,
   useAuthAccessToken,
   useAuthSessionInfo,
+  useAuthInitialized,
 };

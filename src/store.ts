@@ -29,19 +29,33 @@ interface StoreMethods {
   authorize: (params?: Params) => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
+  setInitializedData<Claims>(initializedData: Claims | null): void
 
   /**
    * Receive session token and return user info
    * @returns Promise<Claims | User | null>
    */
-  loadInitialData<Claims extends ClaimsBase, User>(): Promise<ClaimsBase | Claims | User | null>
+  loadInitialData<Claims extends ClaimsBase, User>(): Promise<void>
+
+  /**
+   * Try to remove token from url if redirect is true
+   * @param redirect If true (the default), redirect to the same page without the token.
+   * @returns User | null
+   */
+  removeTokenFromUrl<User>(data: User | null, redirect?: boolean): User | null
+
+  /**
+   * Get initial user info promise
+   * @param redirect If true (the default), redirect to the same page without the token.
+   * @returns Promise<User | null>
+   */
+  getInitialUserInfo<User>(token: string | null, redirect?: boolean): Promise<User | null>
 
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
-   * @param redirect If true (the default), redirect to the same page without the token.
    * @returns Whether a redirect is taking place.
    */
-  receiveSessionToken<User>(redirect?: boolean): Promise<User | null>
+  receiveSessionToken(): string | null
 
   /**
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
@@ -121,6 +135,8 @@ export type UseOidcJwtClientStore = {
   userInfoCache: any
   userInfo: any
 
+  initializedData?: any | null
+
   isLoggedIn: boolean
 
   methods: StoreMethods
@@ -151,7 +167,15 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       isLastAccessTokenInvalid: false,
       isLoggedIn: isLoggedInPersistentValue ? parseJson(isLoggedInPersistentValue) : false,
 
+      initializedData: undefined,
+
       methods: {
+        setInitializedData<Claims>(initializedData: Claims | null) {
+          set({
+            initializedData,
+          });
+        },
+
         setIsLoggedIn(isLoggedIn: boolean) {
           if (!isSSR) localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(isLoggedIn));
           set({
@@ -198,35 +222,44 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 
-        loadInitialData<Claims extends ClaimsBase, User>(): Promise<Claims | User | null> {
-          const { methods: { receiveSessionToken, getAccessToken } } = get();
-          return receiveSessionToken<User>().then((data: User | null) => {
-            if (data) {
-              return getAccessToken<Claims>().then(info => info?.claims ?? null);
-            }
-            return data;
-          });
+        loadInitialData<Claims extends ClaimsBase, User>(): Promise<void> {
+          const { methods: { receiveSessionToken, getAccessToken, getInitialUserInfo, setInitializedData } } = get();
+
+          const token = receiveSessionToken();
+
+          return getInitialUserInfo<User>(token, true).then(() => getAccessToken<Claims>().then(info => {
+            setInitializedData<Claims>(info?.claims ?? null);
+          }));
         },
 
-        receiveSessionToken<User>(redirect = true): Promise<User | null> {
-          const { methods: { setSessionToken, getUserInfo } } = get();
-          const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+        removeTokenFromUrl<User>(data: User | null, redirect = true): User | null {
+          if (redirect) {
+            const urlWithoutToken = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
+            window.history.replaceState({}, '', urlWithoutToken);
+            return data;
+          }
+          return null;
+        },
 
+        getInitialUserInfo<User>(token: string | null, redirect = true): Promise<User | null> {
+          const { methods: { getUserInfo, removeTokenFromUrl } } = get();
           const getUserInfoPromise = getUserInfo<User>();
 
           if (!token) return getUserInfoPromise;
 
-          setSessionToken(token);
-
-          const userInfoHandler = redirect ? async (data: User | null) => {
-            const urlWithoutToken = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-            window.history.replaceState({}, '', urlWithoutToken);
-            return Promise.resolve(data);
-          } : async () => Promise.resolve(null);
-
           return getUserInfoPromise
-            .then(userInfoHandler)
-            .catch(userInfoHandler);
+            .then(data => removeTokenFromUrl(data, redirect))
+            .catch(data => removeTokenFromUrl(data, redirect));
+        },
+
+        receiveSessionToken(): string | null{
+          const { methods: { setSessionToken } } = get();
+          const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+
+          if (!token) return null;
+
+          setSessionToken(token);
+          return token;
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
