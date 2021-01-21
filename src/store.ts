@@ -29,28 +29,42 @@ interface StoreMethods {
   authorize: (params?: Params) => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
+  setInitializedData<Claims>(initializedData: Claims | null): void
+
+  /**
+   * Receive session token and return user info
+   * @param redirect If true (the default), redirect to the same page without the token.
+   * @returns Promise<void>
+   */
+  loadInitialData<Claims extends ClaimsBase, User>(redirect?: boolean): Promise<void>
+
+  /**
+   * Try to remove token from url
+   */
+  removeTokenFromUrl(): void
 
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
-   * @param redirect If true (the default), redirect to the same page without the token.
    * @returns Whether a redirect is taking place.
    */
-  receiveSessionToken(redirect?: boolean): void
+  receiveSessionToken(): string | null
 
   /**
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
    * @returns Promise of access token info, or null.
    */
-
   getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-
   getUserInfo<T>(): Promise<T | null>;
 
+  /**
+   * Set user info.
+   * @returns void
+   */
   setUserInfo<T>(userInfo: T): void;
 
   /**
@@ -113,6 +127,8 @@ export type UseOidcJwtClientStore = {
   userInfoCache: any
   userInfo: any
 
+  initializedData?: any | null
+
   isLoggedIn: boolean
 
   methods: StoreMethods
@@ -143,14 +159,23 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       isLastAccessTokenInvalid: false,
       isLoggedIn: isLoggedInPersistentValue ? parseJson(isLoggedInPersistentValue) : false,
 
+      initializedData: undefined,
+
       methods: {
-        setIsLoggedIn(loggedIn: boolean) {
-          if (!isSSR) localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(loggedIn));
+        setInitializedData<Claims>(initializedData: Claims | null) {
           set({
-            isLoggedIn: loggedIn,
-            ...(!loggedIn ? { userInfoCache: undefined } : {}),
+            initializedData,
           });
         },
+
+        setIsLoggedIn(isLoggedIn: boolean) {
+          if (!isSSR) localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(isLoggedIn));
+          set({
+            isLoggedIn,
+            ...(!isLoggedIn ? { userInfoCache: undefined } : {}),
+          });
+        },
+
         fetchJsonWithAuth<T>(url: string): Promise<T> {
           const { baseUrl, csrfToken } = get();
 
@@ -189,23 +214,47 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 
-        receiveSessionToken(redirect = true) {
-          const { methods: { setSessionToken, getUserInfo } } = get();
-          const match = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+        loadInitialData<Claims extends ClaimsBase, User>(redirect = true): Promise<void> {
+          const {
+            methods: {
+              receiveSessionToken,
+              getAccessToken,
+              getUserInfo,
+              removeTokenFromUrl,
+              setInitializedData,
+            },
+          } = get();
 
-          const getUserInfoPromise = getUserInfo();
+          const token = receiveSessionToken();
 
-          if (!match?.length) return;
+          return getUserInfo<User>().then((data) => {
+            if (!data || !token) {
+              setInitializedData(null);
+              return;
+            }
 
-          setSessionToken(match[1]);
+            if (redirect) {
+              removeTokenFromUrl();
+            }
+            return getAccessToken<Claims>().then(info => {
+              setInitializedData<Claims>(info?.claims ?? null);
+            });
+          });
+        },
 
-          const userInfoHandler = redirect ? () => {
-            window.location.href = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-          } : () => null;
+        removeTokenFromUrl(): void {
+          const urlWithoutToken = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
+          window.history.replaceState({}, '', urlWithoutToken);
+        },
 
-          getUserInfoPromise
-            .then(userInfoHandler)
-            .catch(userInfoHandler);
+        receiveSessionToken(): string | null{
+          const { methods: { setSessionToken } } = get();
+          const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+
+          if (!token) return null;
+
+          setSessionToken(token);
+          return token;
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
@@ -250,6 +299,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
         getUserInfo<T>(): Promise<T | null> {
           const { userInfoCache, userInfo, isLoggedIn, methods: { fetchUserInfo, setUserInfo, setIsLoggedIn } } = get();
+
           if (isLoggedIn && userInfo) {
             return Promise.resolve(userInfo);
           }

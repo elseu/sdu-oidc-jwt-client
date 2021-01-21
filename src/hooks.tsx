@@ -49,10 +49,21 @@ function useAuthIsLoggedIn(): boolean {
   return useStore(state => state.isLoggedIn);
 }
 
+function useAuthSessionInfo(): { hasSession: boolean } {
+  const { useStore } = useOidcJwtContext();
+  const hasSession = useStore(state => !!state.csrfToken);
+  return { hasSession };
+}
+
 function useAuthAccessToken(): { (): Promise<string | null> } {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
   return () => getAccessToken().then(result => result?.token ?? null);
+}
+
+function useAuthInitialized(): any {
+  const { useStore } = useOidcJwtContext();
+  return useStore(state => state.initializedData);
 }
 
 export {
@@ -61,4 +72,6 @@ export {
   useAuthAccessClaims,
   useAuthIsLoggedIn,
   useAuthAccessToken,
+  useAuthSessionInfo,
+  useAuthInitialized,
 };
