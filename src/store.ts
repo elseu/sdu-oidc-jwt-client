@@ -233,14 +233,15 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           }
 
           return getUserInfo<User>().then((data) => {
+            if (redirect) {
+              removeTokenFromUrl();
+            }
+
             if (!data) {
               setInitializedData(null);
               return;
             }
 
-            if (redirect) {
-              removeTokenFromUrl();
-            }
             return getAccessToken<Claims>().then(info => {
               setInitializedData<Claims>(info?.claims ?? null);
             });
