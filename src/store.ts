@@ -227,8 +227,13 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
           const token = receiveSessionToken();
 
+          if (!token) {
+            setInitializedData(null);
+            return Promise.resolve();
+          }
+
           return getUserInfo<User>().then((data) => {
-            if (!data || !token) {
+            if (!data) {
               setInitializedData(null);
               return;
             }
