@@ -139,7 +139,7 @@ export interface OidcJwtClientOptions {
   defaultAuthConfig?: Params;
 }
 
-const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
+export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 

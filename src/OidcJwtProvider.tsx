@@ -1,7 +1,12 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { UseStore } from 'zustand';
 
-import { createOidcJwtClientStore, OidcJwtClientOptions, UseOidcJwtClientStore } from './store';
+import {
+  createOidcJwtClientStore,
+  CSRF_TOKEN_STORAGE_KEY,
+  OidcJwtClientOptions,
+  UseOidcJwtClientStore,
+} from './store';
 import { isSSR } from './utils/isSSR';
 
 export interface OidcJwtProviderProps {
@@ -49,7 +54,6 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   } = useStore(state => state.methods);
 
   const isLoggedIn = useStore(state => state.isLoggedIn);
-  const isCSRFTokenPresent = !!useStore(state => state.csrfToken);
 
   useEffect(() => {
     loadInitialData();
@@ -64,9 +68,14 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
-    if (isSSR || isLoggedIn || !shouldAttemptLogin || isCSRFTokenPresent) return;
+    // We need to directly check localStorage value for csrfToken;
+    // csrfToken is not yet set in store on first render when we get redirected from oidc callback the first time
+    const hasCsrfToken = !isSSR && localStorage.getItem(CSRF_TOKEN_STORAGE_KEY);
+
+    if (isSSR || isLoggedIn || !shouldAttemptLogin || hasCsrfToken) return;
+
     authorize({ prompt: 'none' });
-  }, [authorize, isLoggedIn, shouldAttemptLogin, isCSRFTokenPresent]);
+  }, [authorize, isLoggedIn, shouldAttemptLogin]);
 
   return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };
