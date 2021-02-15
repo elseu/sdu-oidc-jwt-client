@@ -25,6 +25,7 @@ interface AccessTokenCache<T extends ClaimsBase> {
 }
 
 interface StoreMethods {
+  reset: () => void;
   logout: (params?: Params) => void;
   authorize: (params?: Params) => void;
 
@@ -193,24 +194,34 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         authorize(params: Params = {}) {
-          const { defaultAuthConfig, baseUrl } = get();
+          const { defaultAuthConfig, baseUrl, methods: { reset } } = get();
+
           const queryParams = { ...defaultAuthConfig, ...params };
           if (!queryParams.redirect_uri) {
             queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
           }
+
+          reset();
           window.location.href = baseUrl + '/authorize?' + buildQuerystring(queryParams);
         },
 
+        reset: () => {
+          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
+        },
+
         logout: (params: Params = {}) => {
-          const { baseUrl } = get();
+          const { baseUrl, methods: { reset } } = get();
+
+          const post_logout_redirect_uri = params.post_logout_redirect_uri || window.location.href;
           const queryParams = {
             ...params,
-            post_logout_redirect_uri: params.post_logout_redirect_uri || window.location.href,
+            post_logout_redirect_uri,
           };
 
           if (isSSR) return;
-          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
+
+          reset();
           window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
         },
 
