@@ -265,13 +265,14 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         receiveSessionToken(): string | null{
-          const { methods: { setSessionToken } } = get();
+          const { csrfToken, methods: { setSessionToken } } = get();
           const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
-          if (!token) return null;
+          const returnedToken = token || csrfToken;
+          if (!returnedToken) return null;
 
-          setSessionToken(token);
-          return token;
+          setSessionToken(returnedToken);
+          return returnedToken;
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
