@@ -338,22 +338,23 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         monitorAccessToken(): void {
           const { accessTokenCache, methods: { fetchAccessToken } } = get();
 
-          const updateToken = () => {
-            fetchAccessToken();
+          const updateToken = (first = false) => {
+            if ((first && !accessTokenCache) || !first) {
+              fetchAccessToken();
+            }
             accessTokenCache?.then(cache => {
               if (!cache.validUntil) return;
-
               // Update the token some 10 seconds before it expires.
               const now = new Date().getTime();
               const tokenUpdateTimestamp = cache.validUntil - 1000;
               const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
 
               // Set a timeout to fetch a new token in X seconds.
-              set({ monitorAccessTokenTimeout: setTimeout(updateToken, timeoutMs) });
+              set({ monitorAccessTokenTimeout: setTimeout(() => updateToken(false), timeoutMs) });
             });
           };
 
-          updateToken();
+          updateToken(true);
         },
 
         stopMonitoringAccessToken(): void {
