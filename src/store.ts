@@ -25,9 +25,9 @@ interface AccessTokenCache<T extends ClaimsBase> {
 }
 
 interface InitializedData<Claims extends ClaimsBase, User> {
-  isLoggedIn: boolean
-  claims?: Claims
-  user?: User
+  isLoading: boolean
+  claims: Claims | undefined
+  user: User | undefined
 }
 
 interface StoreMethods {
@@ -134,7 +134,7 @@ export type UseOidcJwtClientStore = {
   userInfoCache: any
   userInfo: any
 
-  initializedData?: InitializedData<any, any>
+  initializedData: InitializedData<any, any>
 
   isLoggedIn: boolean
 
@@ -166,7 +166,11 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       isLastAccessTokenInvalid: false,
       isLoggedIn: isLoggedInPersistentValue ? parseJson(isLoggedInPersistentValue) : false,
 
-      initializedData: undefined,
+      initializedData: {
+        isLoading: true,
+        claims: undefined,
+        user: undefined,
+      },
 
       methods: {
         setInitializedData<Claims extends ClaimsBase, User>(initializedData: InitializedData<Claims, User>) {
@@ -246,7 +250,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
           if (!token) {
             setInitializedData({
-              isLoggedIn: false,
+              isLoading: false,
               claims: undefined,
               user: undefined,
             });
@@ -260,7 +264,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
             if (!user || !Object.keys(user).length) {
               setInitializedData({
-                isLoggedIn: false,
+                isLoading: false,
                 claims: undefined,
                 user: undefined,
               });
@@ -269,7 +273,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
             return getAccessToken<Claims>().then(info => {
               setInitializedData<Claims, User>({
-                isLoggedIn: !!info?.claims,
+                isLoading: false,
                 claims: info?.claims ?? undefined,
                 user,
               });

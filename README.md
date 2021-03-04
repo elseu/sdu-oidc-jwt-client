@@ -50,13 +50,17 @@ const onClickLogin = React.useCallback(() => {
 ```
 
 ### Get the initialized status
-Checks when the loadInitialData function load on is done executing and will return with the claims or null,
-depending on if you were logged in or logged out on initialization.
-Default is undefined.
+Will return loading when authentication is still initializing.
+Will return loading false with claims and user when user is successfully authenticated,
+Will return loading false with undefined claims and undefined user when logged out or authentication failed.
+
+Checks when the loadInitialData function is done executing and will return with the user and claims.
 
 ```javascript
-const initializedData = useAuthInitialized();
-console.log('This is the initialized data: ', initializedData)
+const { isLoading, user, claims } = useAuthInitialized<YourClaimsType, YourUserType>();
+console.log('Initialized data is still loading: ', isLoading)
+console.log('Initialized data has user: ', user)
+console.log('Initialized data has claims: ', claims)
 ```
 
 

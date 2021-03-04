@@ -17,12 +17,12 @@ function useAuthControls(): IUseAuthControls {
 }
 
 interface IUserAuthInitialized<Claims extends ClaimsBase, User> {
-  isLoggedIn: boolean
-  claims?: Claims
-  user?: User
+  isLoading: boolean
+  claims: Claims | undefined
+  user: User | undefined
 }
 
-function useAuthInitialized<Claims extends ClaimsBase, User>(): IUserAuthInitialized<Claims, User> | undefined {
+function useAuthInitialized<Claims extends ClaimsBase, User>(): IUserAuthInitialized<Claims, User> {
   const { useStore } = useOidcJwtContext();
   return useStore(state => state.initializedData);
 }
