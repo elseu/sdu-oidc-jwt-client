@@ -24,13 +24,19 @@ interface AccessTokenCache<T extends ClaimsBase> {
   isError: boolean;
 }
 
+interface InitializedData<Claims extends ClaimsBase, User> {
+  isLoggedIn: boolean
+  claims?: Claims
+  user?: User
+}
+
 interface StoreMethods {
   reset: () => void;
   logout: (params?: Params) => void;
   authorize: (params?: Params) => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
-  setInitializedData<Claims>(initializedData: Claims | null): void
+  setInitializedData<Claims extends ClaimsBase, User>(initializedData: InitializedData<Claims, User>): void
 
   /**
    * Receive session token and return user info
@@ -128,7 +134,7 @@ export type UseOidcJwtClientStore = {
   userInfoCache: any
   userInfo: any
 
-  initializedData?: any | null
+  initializedData?: InitializedData<any, any>
 
   isLoggedIn: boolean
 
@@ -163,7 +169,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
       initializedData: undefined,
 
       methods: {
-        setInitializedData<Claims>(initializedData: Claims | null) {
+        setInitializedData<Claims extends ClaimsBase, User>(initializedData: InitializedData<Claims, User>) {
           set({
             initializedData,
           });
@@ -239,22 +245,34 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           const token = receiveSessionToken();
 
           if (!token) {
-            setInitializedData(null);
+            setInitializedData({
+              isLoggedIn: false,
+              claims: undefined,
+              user: undefined,
+            });
             return Promise.resolve();
           }
 
-          return getUserInfo<User>().then((data) => {
+          return getUserInfo<User>().then((user) => {
             if (redirect) {
               removeTokenFromUrl();
             }
 
-            if (!data) {
-              setInitializedData(null);
+            if (!user || !Object.keys(user).length) {
+              setInitializedData({
+                isLoggedIn: false,
+                claims: undefined,
+                user: undefined,
+              });
               return;
             }
 
             return getAccessToken<Claims>().then(info => {
-              setInitializedData<Claims>(info?.claims ?? null);
+              setInitializedData<Claims, User>({
+                isLoggedIn: !!info?.claims,
+                claims: info?.claims ?? undefined,
+                user,
+              });
             });
           });
         },
