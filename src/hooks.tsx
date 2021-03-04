@@ -4,17 +4,27 @@ import { AsyncState } from 'react-use/lib/useAsync';
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
 
-interface OidcAuthControls {
+interface IUseAuthControls {
   authorize(params?: Params): void;
-
   logout(params?: Params): void;
 }
 
-function useAuthControls(): OidcAuthControls {
+function useAuthControls(): IUseAuthControls {
   const { useStore } = useOidcJwtContext();
   const authorize = useStore(state => state.methods.authorize);
   const logout = useStore(state => state.methods.logout);
   return { authorize, logout };
+}
+
+interface IUserAuthInitialized<Claims extends ClaimsBase, User> {
+  isLoggedIn: boolean
+  claims?: Claims
+  user?: User
+}
+
+function useAuthInitialized<Claims extends ClaimsBase, User>(): IUserAuthInitialized<Claims, User> | undefined {
+  const { useStore } = useOidcJwtContext();
+  return useStore(state => state.initializedData);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
@@ -59,11 +69,6 @@ function useAuthAccessToken(): { (): Promise<string | null> } {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
   return () => getAccessToken().then(result => result?.token ?? null);
-}
-
-function useAuthInitialized(): any {
-  const { useStore } = useOidcJwtContext();
-  return useStore(state => state.initializedData);
 }
 
 export {
