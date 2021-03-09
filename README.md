@@ -49,18 +49,12 @@ const onClickLogin = React.useCallback(() => {
 }, [authorize]);
 ```
 
-### Get the initialized status
-Will return loading when authentication is still initializing.
-Will return loading false with claims and user when user is successfully authenticated,
-Will return loading false with undefined claims and undefined user when logged out or authentication failed.
-
-Checks when the loadInitialData function is done executing and will return with the user and claims.
+### Check if authentication client has initialized
+Checks when the loadInitialData function is done executing and will return true when finished. NB! This doesn't mean you're logged in, jsut that the authentication is done initializing.
 
 ```javascript
-const { isLoading, user, claims } = useAuthInitialized<YourClaimsType, YourUserType>();
-console.log('Initialized data is still loading: ', isLoading)
-console.log('Initialized data has user: ', user)
-console.log('Initialized data has claims: ', claims)
+const isInitialized = useAuthInitialized();
+console.log('Auth is initialized: ', isInitialized)
 ```
 
 
@@ -76,8 +70,8 @@ console.log('This is the userInfo: ', value)
 To get the claims you can do this within the context of the provider:
 
 ```javascript
-const  { value, loading } = useAuthAccessClaims();
-console.log('This are the claims: ', value)
+const { value, loading } = useAuthAccessClaims();
+console.log('These are the claims: ', value)
 ```
 
 
@@ -89,11 +83,11 @@ const isLoggedIn = useAuthIsLoggedIn();
 console.log('Is the user loggedin? ', isLoggedIn)
 ```
 
-### Check if a user has a session
-Checking if the user has an active session
+### Check if the users session has expired
+Checking if the users session has expired
 
 ```javascript
-const { hasSession } = useAuthSessionInfo();
-console.log('Does the user have a session? ', hasSession)
+const isSessionExpired = useAuthSessionExpired();
+console.log('Is the users session expired? ', isSessionExpired)
 ```
 
