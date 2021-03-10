@@ -1,12 +1,13 @@
-import { useAsync } from 'react-use';
+import { useEffect, useState } from 'react';
+import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './store';
 
 interface IUseAuthControls {
-  authorize(params?: Params): void;
-  logout(params?: Params): void;
+  logout: (params?: Params) => void;
+  authorize: (params?: Params) => void;
 }
 
 function useAuthControls(): IUseAuthControls {
@@ -16,15 +17,9 @@ function useAuthControls(): IUseAuthControls {
   return { authorize, logout };
 }
 
-interface IUserAuthInitialized<Claims extends ClaimsBase, User> {
-  isLoading: boolean
-  claims: Claims | undefined
-  user: User | undefined
-}
-
-function useAuthInitialized<Claims extends ClaimsBase, User>(): IUserAuthInitialized<Claims, User> {
+function useAuthInitialized(): boolean {
   const { useStore } = useOidcJwtContext();
-  return useStore(state => state.initializedData);
+  return useStore(state => state.isInitialized);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
@@ -59,10 +54,21 @@ function useAuthIsLoggedIn(): boolean {
   return useStore(state => state.isLoggedIn);
 }
 
-function useAuthSessionInfo(): { hasSession: boolean } {
+function useAuthSessionExpired(): boolean {
   const { useStore } = useOidcJwtContext();
-  const hasSession = useStore(state => !!state.csrfToken);
-  return { hasSession };
+
+  const isLoggedIn = useStore(state => state.isLoggedIn);
+  const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
+  const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
+
+  useEffect(() => {
+    const isSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
+    if (!isSessionExpired) return;
+
+    setSessionExpired(isSessionExpired);
+  }, [isLoggedIn, isPrevLoggedIn]);
+
+  return isSessionExpired;
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
@@ -77,6 +83,6 @@ export {
   useAuthAccessClaims,
   useAuthIsLoggedIn,
   useAuthAccessToken,
-  useAuthSessionInfo,
+  useAuthSessionExpired,
   useAuthInitialized,
 };

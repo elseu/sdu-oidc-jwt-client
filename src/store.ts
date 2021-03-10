@@ -1,8 +1,8 @@
 import create, { UseStore } from 'zustand';
 
+import { Storage } from './storage';
 import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
-import { parseJson } from './utils/parseJson';
 
 export interface Params {
   [key: string]: string
@@ -24,19 +24,19 @@ interface AccessTokenCache<T extends ClaimsBase> {
   isError: boolean;
 }
 
-interface InitializedData<Claims extends ClaimsBase, User> {
+export interface InitializedData<Claims extends ClaimsBase, User> {
   isLoading: boolean
   claims: Claims | undefined
   user: User | undefined
 }
 
 interface StoreMethods {
-  reset: () => void;
+  resetStorage: () => void;
   logout: (params?: Params) => void;
   authorize: (params?: Params) => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
-  setInitializedData<Claims extends ClaimsBase, User>(initializedData: InitializedData<Claims, User>): void
+  setInitialized(isInitialized: boolean): void
 
   /**
    * Receive session token and return user info
@@ -54,13 +54,25 @@ interface StoreMethods {
    * Read the session token from the URL. Remove it from the URL if possible.
    * @returns Whether a redirect is taking place.
    */
-  receiveSessionToken(): string | null
+  getSessionToken(): string | null
+
+  /**
+   * Get the access token promise.
+   * @returns Promise of access token info
+   */
+  getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>>
 
   /**
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
    * @returns Promise of access token info, or null.
    */
   getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null>;
+
+  /**
+   * Get user info success handle
+   * @returns user info or null.
+   */
+  getUserInfoSuccess<T>(data: T): T | null
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
@@ -73,6 +85,12 @@ interface StoreMethods {
    * @returns void
    */
   setUserInfo<T>(userInfo: T): void;
+
+  /**
+   * Gets user info cache promise
+   * @returns A promise of the user info cache
+   */
+  getUserInfoPromise<T>(): Promise<T | null>;
 
   /**
    * Fetch fresh user info.
@@ -104,11 +122,6 @@ interface StoreMethods {
   setSessionToken(token: string): void;
 
   /**
-   * Remove our session token.
-   */
-  removeSessionToken(): void;
-
-  /**
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
@@ -131,11 +144,10 @@ export type UseOidcJwtClientStore = {
   monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null
 
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
-  userInfoCache: any
+  userInfoCache?: any
   userInfo: any
 
-  initializedData: InitializedData<any, any>
-
+  isInitialized: boolean
   isLoggedIn: boolean
 
   methods: StoreMethods
@@ -152,35 +164,29 @@ const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
 function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
-    const isLoggedInPersistentValue = !isSSR ? localStorage.getItem(LOGGED_IN_TOKEN_STORAGE_KEY) : undefined;
-    const userInfoPersistentValue = !isSSR ? localStorage.getItem(USER_INFO_TOKEN_STORAGE_KEY) : undefined;
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
-      csrfToken: (!isSSR && localStorage.getItem(CSRF_TOKEN_STORAGE_KEY)) || null,
       defaultAuthConfig: options.defaultAuthConfig || {},
+
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
       userInfoCache: undefined,
-      userInfo: userInfoPersistentValue ? parseJson(userInfoPersistentValue) : undefined,
+      csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
+      userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
 
-      isLastAccessTokenInvalid: false,
-      isLoggedIn: isLoggedInPersistentValue ? parseJson(isLoggedInPersistentValue) : false,
+      isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
 
-      initializedData: {
-        isLoading: true,
-        claims: undefined,
-        user: undefined,
-      },
+      isInitialized: false,
 
       methods: {
-        setInitializedData<Claims extends ClaimsBase, User>(initializedData: InitializedData<Claims, User>) {
+        setInitialized(isInitialized: boolean) {
           set({
-            initializedData,
+            isInitialized,
           });
         },
 
         setIsLoggedIn(isLoggedIn: boolean) {
-          if (!isSSR) localStorage.setItem(LOGGED_IN_TOKEN_STORAGE_KEY, JSON.stringify(isLoggedIn));
+          Storage.set(LOGGED_IN_TOKEN_STORAGE_KEY, isLoggedIn);
           set({
             isLoggedIn,
             ...(!isLoggedIn ? { userInfoCache: undefined } : {}),
@@ -190,12 +196,14 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         fetchJsonWithAuth<T>(url: string): Promise<T> {
           const { baseUrl, csrfToken } = get();
 
-          return fetch(baseUrl + url, {
+          const config: RequestInit = {
             headers: {
-              Authorization: 'Bearer ' + csrfToken,
+              Authorization: `Bearer ${csrfToken}`,
             },
             credentials: 'include',
-          }).then<T>((response) => {
+          };
+
+          return fetch(`${baseUrl}${url}`, config).then<T>(response => {
             if (!response.ok) {
               throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
             }
@@ -204,24 +212,25 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         authorize(params: Params = {}) {
-          const { defaultAuthConfig, baseUrl, methods: { reset } } = get();
+          const { defaultAuthConfig, baseUrl, methods: { resetStorage } } = get();
 
           const queryParams = { ...defaultAuthConfig, ...params };
           if (!queryParams.redirect_uri) {
             queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
           }
 
-          reset();
-          window.location.href = baseUrl + '/authorize?' + buildQuerystring(queryParams);
+          resetStorage();
+
+          window.location.href = `${baseUrl}/authorize?${buildQuerystring(queryParams)}`;
         },
 
-        reset: () => {
-          localStorage.removeItem(LOGGED_IN_TOKEN_STORAGE_KEY);
-          localStorage.removeItem(USER_INFO_TOKEN_STORAGE_KEY);
+        resetStorage() {
+          Storage.unset(LOGGED_IN_TOKEN_STORAGE_KEY);
+          Storage.unset(USER_INFO_TOKEN_STORAGE_KEY);
         },
 
-        logout: (params: Params = {}) => {
-          const { baseUrl, methods: { reset } } = get();
+        logout(params: Params = {}) {
+          const { baseUrl, methods: { resetStorage } } = get();
 
           const post_logout_redirect_uri = params.post_logout_redirect_uri || window.location.href;
           const queryParams = {
@@ -229,31 +238,25 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             post_logout_redirect_uri,
           };
 
-          if (isSSR) return;
-
-          reset();
-          window.location.href = baseUrl + '/logout?' + buildQuerystring(queryParams);
+          resetStorage();
+          window.location.href = `${baseUrl}/logout?${buildQuerystring(queryParams)}`;
         },
 
         loadInitialData<Claims extends ClaimsBase, User>(redirect = true): Promise<void> {
           const {
             methods: {
-              receiveSessionToken,
+              getSessionToken,
               getAccessToken,
               getUserInfo,
               removeTokenFromUrl,
-              setInitializedData,
+              setInitialized,
             },
           } = get();
 
-          const token = receiveSessionToken();
+          const token = getSessionToken();
 
           if (!token) {
-            setInitializedData({
-              isLoading: false,
-              claims: undefined,
-              user: undefined,
-            });
+            setInitialized(true);
             return Promise.resolve();
           }
 
@@ -263,21 +266,11 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             }
 
             if (!user || !Object.keys(user).length) {
-              setInitializedData({
-                isLoading: false,
-                claims: undefined,
-                user: undefined,
-              });
+              setInitialized(true);
               return;
             }
 
-            return getAccessToken<Claims>().then(info => {
-              setInitializedData<Claims, User>({
-                isLoading: false,
-                claims: info?.claims ?? undefined,
-                user,
-              });
-            });
+            return getAccessToken<Claims>().then(() => setInitialized(true));
           });
         },
 
@@ -286,15 +279,15 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.history.replaceState({}, '', urlWithoutToken);
         },
 
-        receiveSessionToken(): string | null{
+        getSessionToken(): string | null{
           const { csrfToken, methods: { setSessionToken } } = get();
           const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
-          const returnedToken = token || csrfToken;
-          if (!returnedToken) return null;
+          const receivedToken = token || csrfToken || null;
 
-          setSessionToken(returnedToken);
-          return returnedToken;
+          if (receivedToken) setSessionToken(receivedToken);
+
+          return receivedToken;
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
@@ -312,7 +305,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             return cache.value;
           }
 
-          // Cache is no longer valid; go again.
+          // Cache is no longer valid; go again (on logout)
           if (accessTokenCache === currentAccessTokenCache) {
             // Remove the cache, but only if it hasn't already been removed and recreated by someone else.
             set({ accessTokenCache: null });
@@ -327,18 +320,27 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             return fetchAccessToken<T>();
           }
 
-          const currentAccessTokenCache = accessTokenCache;
-
-          return accessTokenCache.then((cache) => validateAccessTokenCache<T>(cache, currentAccessTokenCache));
+          // const currentCache = accessTokenCache;
+          return accessTokenCache.then(cache => validateAccessTokenCache<T>(cache, accessTokenCache));
         },
 
         setUserInfo<T>(userInfo: T) {
-          if (!isSSR) localStorage.setItem(USER_INFO_TOKEN_STORAGE_KEY, JSON.stringify(userInfo));
+          Storage.set(USER_INFO_TOKEN_STORAGE_KEY, userInfo);
           set({ userInfo });
         },
 
+        getUserInfoSuccess<T>(data: T): T | null {
+          const { methods: { setUserInfo, setIsLoggedIn } } = get();
+
+          if (data && Object.keys(data).length) {
+            setUserInfo<T>(data);
+            setIsLoggedIn(true);
+          }
+          return data;
+        },
+
         getUserInfo<T>(): Promise<T | null> {
-          const { userInfoCache, userInfo, isLoggedIn, methods: { fetchUserInfo, setUserInfo, setIsLoggedIn } } = get();
+          const { userInfoCache, userInfo, isLoggedIn, methods: { fetchUserInfo, getUserInfoSuccess } } = get();
 
           if (isLoggedIn && userInfo) {
             return Promise.resolve(userInfo);
@@ -348,13 +350,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             return userInfoCache;
           }
 
-          return fetchUserInfo<T>().then((data) => {
-            if (data && Object.keys(data).length) {
-              setUserInfo<T>(data);
-              setIsLoggedIn(true);
-            }
-            return Promise.resolve(data);
-          });
+          return fetchUserInfo<T>().then(getUserInfoSuccess);
         },
 
         monitorAccessToken(): void {
@@ -364,16 +360,19 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             if ((first && !accessTokenCache) || !first) {
               fetchAccessToken();
             }
-            accessTokenCache?.then(cache => {
-              if (!cache.validUntil) return;
-              // Update the token some 10 seconds before it expires.
-              const now = new Date().getTime();
-              const tokenUpdateTimestamp = cache.validUntil - 1000;
-              const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
+            accessTokenCache?.then(accessTokenCacheHandler);
+          };
 
-              // Set a timeout to fetch a new token in X seconds.
-              set({ monitorAccessTokenTimeout: setTimeout(() => updateToken(false), timeoutMs) });
-            });
+          const accessTokenCacheHandler = (cache: AccessTokenCache<any>) => {
+            if (!cache.validUntil) return;
+
+            // Update the token some 10 seconds before it expires.
+            const now = new Date().getTime();
+            const tokenUpdateTimestamp = cache.validUntil - 1000;
+            const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
+
+            // Set a timeout to fetch a new token in X seconds.
+            set({ monitorAccessTokenTimeout: setTimeout(() => updateToken(false), timeoutMs) });
           };
 
           updateToken(true);
@@ -386,43 +385,34 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         setSessionToken(token: string): void {
+          Storage.set(CSRF_TOKEN_STORAGE_KEY, token);
           set({ csrfToken: token });
-          if (!isSSR) localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token);
         },
 
-        removeSessionToken(): void {
-          // Save token to store, HttpClient and localStorage
-          set({ csrfToken: null });
-          if (!isSSR) localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
-        },
+        getUserInfoPromise<T>(): Promise<T | null> {
+          const { methods: { fetchJsonWithAuth } } = get();
 
-        fetchUserInfo<T>(): Promise<T | null> {
-          const { csrfToken, methods: { fetchJsonWithAuth } } = get();
-
-          if (!csrfToken) {
-            return Promise.resolve(null);
-          }
-
-          const userInfoCacheError = (_error: HttpError) => {
-            return null;
-          };
-
-          const userInfoCache = fetchJsonWithAuth<T>('/userinfo').then(result => result, userInfoCacheError);
+          const userInfoCache = fetchJsonWithAuth<T>('/userinfo').then(result => result, () => null);
 
           set({ userInfoCache });
 
           return userInfoCache;
         },
 
-        fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
-          const { csrfToken, methods, methods: { fetchJsonWithAuth } } = get();
-          const { fetchAccessTokenSuccess, fetchAccessTokenError } = methods;
+        fetchUserInfo<T>(): Promise<T | null> {
+          const { methods: { getSessionToken, getUserInfoPromise } } = get();
 
-          const fetchedAt = new Date().getTime();
+          const csrfToken = getSessionToken();
+
           if (!csrfToken) {
-            return Promise.resolve({ token: null, claims: null });
+            return Promise.resolve(null);
           }
 
+          return getUserInfoPromise<T>();
+        },
+
+        getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>> {
+          const { methods: { fetchJsonWithAuth, fetchAccessTokenSuccess, fetchAccessTokenError } } = get();
           const accessTokenCache = fetchJsonWithAuth<AccessTokenInfo<T>>('/token').then(
             result => fetchAccessTokenSuccess<T>(result, fetchedAt),
             fetchAccessTokenError,
@@ -430,7 +420,20 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
           set({ accessTokenCache });
 
-          return accessTokenCache.then((result) => result.value);
+          return accessTokenCache.then(result => result.value);
+        },
+
+        fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
+          const { methods: { getAccessTokenPromise, getSessionToken } } = get();
+
+          const csrfToken = getSessionToken();
+          const fetchedAt = new Date().getTime();
+
+          if (!csrfToken) {
+            return Promise.resolve({ token: null, claims: null });
+          }
+
+          return getAccessTokenPromise<T>(fetchedAt);
         },
 
         fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number) {

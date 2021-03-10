@@ -7,7 +7,7 @@ import {
   useAuthControls,
   useAuthInitialized,
   useAuthIsLoggedIn,
-  useAuthSessionInfo,
+  useAuthSessionExpired,
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
@@ -85,7 +85,7 @@ interface Claims {
 
 const Content = (props: ContentProps) => {
   const { testApiUrl } = props;
-  const sessionInfo = useAuthSessionInfo();
+  const isSessionExpired = useAuthSessionExpired();
   const { value: userInfo } = useAuthUserInfo<UserInfo>();
   const [token, setToken] = useState<null | string>(null);
   const [apiResult, setApiResult] = useState<null | string>(null);
@@ -93,7 +93,7 @@ const Content = (props: ContentProps) => {
   const { authorize, logout } = useAuthControls();
   const fetchAccessToken = useAuthAccessToken();
   const isLoggedIn = useAuthIsLoggedIn();
-  const initializedData = useAuthInitialized();
+  const isInitialized = useAuthInitialized();
 
   const onClickFetchToken = React.useCallback(() => {
     fetchAccessToken().then((token) => {
@@ -153,16 +153,30 @@ const Content = (props: ContentProps) => {
         )}
       </div>
       <hr />
-      <h1>Initialized data</h1>
-      <LargeTextArea value={JSON.stringify(initializedData, undefined, 4)}></LargeTextArea>
-      <h1>Session info</h1>
-      <LargeTextArea value={JSON.stringify(sessionInfo, undefined, 4)}></LargeTextArea>
-      <h1>User info</h1>
-      <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
-      <h1>Access token claims</h1>
-      <LargeTextArea value={JSON.stringify(claims, undefined, 4)}></LargeTextArea>
-      <h1>User is logged in?</h1>
-      <LargeTextArea value={JSON.stringify(isLoggedIn, undefined, 4)}></LargeTextArea>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: `${100 / 3}%` }}>
+          <h1>User info</h1>
+          <LargeTextArea value={JSON.stringify(userInfo, undefined, 4)}></LargeTextArea>
+        </div>
+        <div style={{ width: `${100 / 3}%` }}>
+          <h1>Access token claims</h1>
+          <LargeTextArea value={JSON.stringify(claims, undefined, 4)}></LargeTextArea>
+        </div>
+      </div>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: `${100 / 3}%` }}>
+          <h1>Auth is nitialized</h1>
+          <LargeTextArea value={JSON.stringify(isInitialized, undefined, 4)}></LargeTextArea>
+        </div>
+        <div style={{ width: `${100 / 3}%` }}>
+          <h1>User is logged in?</h1>
+          <LargeTextArea value={JSON.stringify(isLoggedIn, undefined, 4)}></LargeTextArea>
+        </div>
+        <div style={{ width: `${100 / 3}%` }}>
+          <h1>Session Expired?</h1>
+          <LargeTextArea value={JSON.stringify(isSessionExpired, undefined, 4)}></LargeTextArea>
+        </div>
+      </div>
     </>
   );
 };
