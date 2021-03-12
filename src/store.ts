@@ -1,3 +1,5 @@
+import 'isomorphic-fetch';
+
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
