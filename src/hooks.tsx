@@ -57,6 +57,7 @@ function useAuthIsLoggedIn(): boolean {
 function useAuthSessionExpired(): boolean {
   const { useStore } = useOidcJwtContext();
 
+  const resetStorage = useStore(state => state.methods.resetStorage);
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
@@ -66,7 +67,8 @@ function useAuthSessionExpired(): boolean {
     if (!isSessionExpired) return;
 
     setSessionExpired(isSessionExpired);
-  }, [isLoggedIn, isPrevLoggedIn]);
+    resetStorage();
+  }, [isLoggedIn, isPrevLoggedIn, resetStorage]);
 
   return isSessionExpired;
 }
