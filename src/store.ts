@@ -1,4 +1,4 @@
-import 'isomorphic-fetch';
+import 'whatwg-fetch';
 
 import create, { UseStore } from 'zustand';
 
@@ -198,11 +198,11 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         fetchJsonWithAuth<T>(url: string): Promise<T> {
           const { baseUrl, csrfToken } = get();
 
-          const config: RequestInit = {
+          const config = {
             headers: {
               Authorization: `Bearer ${csrfToken}`,
             },
-            credentials: 'include',
+            credentials: 'include' as RequestCredentials,
           };
 
           return fetch(`${baseUrl}${url}`, config).then<T>(response => {
