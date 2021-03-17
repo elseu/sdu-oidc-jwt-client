@@ -1,5 +1,3 @@
-import 'whatwg-fetch';
-
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';

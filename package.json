@@ -106,7 +106,6 @@
   },
   "dependencies": {
     "react-use": "^15.3.8",
-    "whatwg-fetch": "^3.6.2",
     "zustand": "^3.3.0"
   }
 }
