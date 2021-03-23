@@ -1,7 +1,7 @@
 interface HttpErrorInput {
-  message: string
-  statusCode: number
-  response?: Response
+  message: string;
+  statusCode: number;
+  response?: Response;
 }
 
 export class HttpError extends Error {

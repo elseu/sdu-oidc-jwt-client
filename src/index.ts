@@ -1,2 +1,2 @@
-export * from './OidcJwtProvider';
 export * from './hooks';
+export * from './OidcJwtProvider';
