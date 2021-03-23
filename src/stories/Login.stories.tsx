@@ -42,14 +42,14 @@ interface ContentProps {
 }
 
 interface UserInfo {
-  cn: string
-  email: string
-  givenName: string
-  login: string
-  name: string
-  sn: string
-  sub: string
-  updated_at: number
+  cn: string;
+  email: string;
+  givenName: string;
+  login: string;
+  name: string;
+  sn: string;
+  sub: string;
+  updated_at: number;
 }
 
 interface Orig {

@@ -80,11 +80,11 @@ function useAuthAccessToken(): { (): Promise<string | null> } {
 }
 
 export {
-  useAuthControls,
-  useAuthUserInfo,
   useAuthAccessClaims,
-  useAuthIsLoggedIn,
   useAuthAccessToken,
-  useAuthSessionExpired,
+  useAuthControls,
   useAuthInitialized,
+  useAuthIsLoggedIn,
+  useAuthSessionExpired,
+  useAuthUserInfo,
 };

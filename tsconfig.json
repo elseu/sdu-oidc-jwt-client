@@ -6,12 +6,18 @@
     "moduleResolution": "node",
     "lib": [
       "dom",
-      "esnext"
+      "es2017"
     ],
-    "declaration": true,
-    "outDir": "dist",
-    "strict": true,
+    "sourceMap": true,
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "noEmit": true,
   }
 }

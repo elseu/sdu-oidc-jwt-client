@@ -1,5 +1,3 @@
-import 'whatwg-fetch';
-
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
@@ -7,12 +5,12 @@ import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface Params {
-  [key: string]: string
+  [key: string]: string;
 }
 
 export interface ClaimsBase {
-  iat: number
-  exp: number
+  iat: number;
+  exp: number;
 }
 
 interface AccessTokenInfo<T extends ClaimsBase> {
@@ -27,9 +25,9 @@ interface AccessTokenCache<T extends ClaimsBase> {
 }
 
 export interface InitializedData<Claims extends ClaimsBase, User> {
-  isLoading: boolean
-  claims: Claims | undefined
-  user: User | undefined
+  isLoading: boolean;
+  claims: Claims | undefined;
+  user: User | undefined;
 }
 
 interface StoreMethods {
@@ -38,31 +36,31 @@ interface StoreMethods {
   authorize: (params?: Params) => void;
 
   setIsLoggedIn(loggedIn: boolean): void;
-  setInitialized(isInitialized: boolean): void
+  setInitialized(isInitialized: boolean): void;
 
   /**
    * Receive session token and return user info
    * @param redirect If true (the default), redirect to the same page without the token.
    * @returns Promise<void>
    */
-  loadInitialData<Claims extends ClaimsBase, User>(redirect?: boolean): Promise<void>
+  loadInitialData(redirect?: boolean): Promise<void>;
 
   /**
    * Try to remove token from url
    */
-  removeTokenFromUrl(): void
+  removeTokenFromUrl(): void;
 
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
    * @returns Whether a redirect is taking place.
    */
-  getSessionToken(): string | null
+  getSessionToken(): string | null;
 
   /**
    * Get the access token promise.
    * @returns Promise of access token info
    */
-  getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>>
+  getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>>;
 
   /**
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
@@ -74,7 +72,7 @@ interface StoreMethods {
    * Get user info success handle
    * @returns user info or null.
    */
-  getUserInfoSuccess<T>(data: T): T | null
+  getUserInfoSuccess<T>(data: T): T | null;
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
@@ -115,7 +113,7 @@ interface StoreMethods {
    * @returns null, AccessTokenInfo or Promise of AccessTokenInfo
    */
   // eslint-disable-next-line max-len
-  validateAccessTokenCache<T extends ClaimsBase>(cache: AccessTokenCache<T>, currentAccessTokenCache: Promise<AccessTokenCache<T>>): null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null>
+  validateAccessTokenCache<T extends ClaimsBase>(cache: AccessTokenCache<T>, currentAccessTokenCache: Promise<AccessTokenCache<T>>): null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Set our session token.
@@ -136,23 +134,23 @@ interface StoreMethods {
   /**
    * Fetch wrapper
    */
-  fetchJsonWithAuth<T>(url: string): Promise<T>
+  fetchJsonWithAuth<T>(url: string): Promise<T>;
 }
 
 export type UseOidcJwtClientStore = {
-  baseUrl: string
-  csrfToken: string | null
-  defaultAuthConfig: Params
-  monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null
+  baseUrl: string;
+  csrfToken: string | null;
+  defaultAuthConfig: Params;
+  monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null;
 
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
-  userInfoCache?: any
-  userInfo: any
+  userInfoCache?: any;
+  userInfo: any;
 
-  isInitialized: boolean
-  isLoggedIn: boolean
+  isInitialized: boolean;
+  isLoggedIn: boolean;
 
-  methods: StoreMethods
+  methods: StoreMethods;
 };
 
 export interface OidcJwtClientOptions {
@@ -281,7 +279,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.history.replaceState({}, '', urlWithoutToken);
         },
 
-        getSessionToken(): string | null{
+        getSessionToken(): string | null {
           const { csrfToken, methods: { setSessionToken } } = get();
           const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 

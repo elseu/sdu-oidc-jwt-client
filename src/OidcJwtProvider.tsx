@@ -78,4 +78,4 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };
 
-export { useOidcJwtContext, OidcJwtProvider };
+export { OidcJwtProvider, useOidcJwtContext };
