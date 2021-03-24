@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
@@ -76,7 +76,9 @@ function useAuthSessionExpired(): boolean {
 function useAuthAccessToken(): { (): Promise<string | null> } {
   const { useStore } = useOidcJwtContext();
   const getAccessToken = useStore(state => state.methods.getAccessToken);
-  return () => getAccessToken().then(result => result?.token ?? null);
+  return useCallback(() => {
+    return getAccessToken().then(result => result?.token ?? null);
+  }, [getAccessToken]);
 }
 
 export {
