@@ -42,7 +42,6 @@
     "eslint": "^7.22.0",
     "husky": "^5.2.0",
     "prettier": "^2.2.1",
-    "query-string": "^5.1.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-is": "^17.0.2",
@@ -53,11 +52,13 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
+    "query-string": "^6.14.1",
     "react-use": "^17.2.1",
     "zustand": "^3.3.3"
   },
   "peerDependencies": {
-    "react": ">=16"
+    "react": ">=16",
+    "react-dom": ">=16"
   },
   "release": {
     "branches": [
