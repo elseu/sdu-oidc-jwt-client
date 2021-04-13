@@ -21,6 +21,7 @@ If you would like to replace this behaviour you could send a custom `removeToken
 
 In NextJS you could create a helper function like this:
 ```tsx
+// removeTokenFromUrlFunction.ts
 import Router from 'next/router';
 import { stripTokenFromUrl } from 'oidc-jwt-client';
 
@@ -34,6 +35,7 @@ export { removeTokenFromUrlFunction };
 
 And then use it like this:
 ```tsx
+// App.tsx
 <OidcJwtProvider
   client={{
      url: 'https://api-auth.acc.titan.awssdu.nl',removeTokenFromUrlFunction
