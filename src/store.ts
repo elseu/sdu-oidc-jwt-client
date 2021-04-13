@@ -1,7 +1,7 @@
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
-import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
+import { buildQuerystring, HttpError, removeTokenFromUrl, stripTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface Params {
@@ -54,7 +54,7 @@ interface StoreMethods {
    * Read the session token from the URL. Remove it from the URL if possible.
    * @returns Whether a redirect is taking place.
    */
-  getSessionToken(): string | null;
+  getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean};
 
   /**
    * Get the access token promise.
@@ -139,40 +139,43 @@ interface StoreMethods {
 
 export type UseOidcJwtClientStore = {
   baseUrl: string;
-  csrfToken: string | null;
   defaultAuthConfig: Params;
-  monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null;
+  removeTokenFromUrlFunction: (url: string) => void;
 
+  monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null;
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
   userInfoCache?: any;
   userInfo: any;
+  csrfToken: string | null;
 
-  isInitialized: boolean;
   isLoggedIn: boolean;
+  isInitialized: boolean;
 
   methods: StoreMethods;
 };
 
-export interface OidcJwtClientOptions {
+export interface OidcJwtClientStoreOptions {
   url: string;
   defaultAuthConfig?: Params;
+  removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
-function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOidcJwtClientStore> {
+function createOidcJwtClientStore(options: OidcJwtClientStoreOptions): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
       defaultAuthConfig: options.defaultAuthConfig || {},
+      removeTokenFromUrlFunction: options.removeTokenFromUrlFunction || removeTokenFromUrl,
 
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
       userInfoCache: undefined,
-      csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
+      csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
 
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
 
@@ -242,10 +245,10 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
           window.location.href = `${baseUrl}/logout?${buildQuerystring(queryParams)}`;
         },
 
-        loadInitialData<Claims extends ClaimsBase, User>(redirect = true): Promise<void> {
+        loadInitialData<Claims extends ClaimsBase, User>(): Promise<void> {
           const {
             methods: {
-              getSessionToken,
+              getCsrfToken,
               getAccessToken,
               getUserInfo,
               removeTokenFromUrl,
@@ -253,18 +256,18 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
             },
           } = get();
 
-          const token = getSessionToken();
+          const { csrfToken, hasTokenFromUrl } = getCsrfToken();
 
-          if (!token) {
+          if (!csrfToken) {
             setInitialized(true);
             return Promise.resolve();
           }
 
-          return getUserInfo<User>().then((user) => {
-            if (redirect) {
-              removeTokenFromUrl();
-            }
+          if (hasTokenFromUrl) {
+            removeTokenFromUrl();
+          }
 
+          return getUserInfo<User>().then((user) => {
             if (!user || !Object.keys(user).length) {
               setInitialized(true);
               return;
@@ -275,11 +278,11 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         removeTokenFromUrl(): void {
-          const urlWithoutToken = stripTokenFromUrl(window.location.href).replace(/\?$/, '').replace(/#\.$/, '');
-          window.history.replaceState({}, '', urlWithoutToken);
+          const { removeTokenFromUrlFunction } = get();
+          removeTokenFromUrlFunction(window.location.href);
         },
 
-        getSessionToken(): string | null {
+        getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean} {
           const { csrfToken, methods: { setSessionToken } } = get();
           const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
@@ -287,7 +290,7 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
 
           if (receivedToken) setSessionToken(receivedToken);
 
-          return receivedToken;
+          return { csrfToken: receivedToken, hasTokenFromUrl: !!token };
         },
 
         validateAccessTokenCache<T extends ClaimsBase>(
@@ -400,9 +403,9 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         fetchUserInfo<T>(): Promise<T | null> {
-          const { methods: { getSessionToken, getUserInfoPromise } } = get();
+          const { methods: { getCsrfToken, getUserInfoPromise } } = get();
 
-          const csrfToken = getSessionToken();
+          const { csrfToken } = getCsrfToken();
 
           if (!csrfToken) {
             return Promise.resolve(null);
@@ -424,9 +427,9 @@ function createOidcJwtClientStore(options: OidcJwtClientOptions): UseStore<UseOi
         },
 
         fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {
-          const { methods: { getAccessTokenPromise, getSessionToken } } = get();
+          const { methods: { getAccessTokenPromise, getCsrfToken } } = get();
 
-          const csrfToken = getSessionToken();
+          const { csrfToken } = getCsrfToken();
           const fetchedAt = new Date().getTime();
 
           if (!csrfToken) {
