@@ -37,11 +37,10 @@ And then use it like this:
 ```tsx
 // App.tsx
 <OidcJwtProvider
-  client={{
-     url: 'https://api-auth.acc.titan.awssdu.nl',removeTokenFromUrlFunction
-   }}
+  client={{ url: 'https://api-auth.acc.titan.awssdu.nl'  }}
   shouldAttemptLogin={false}
   shouldMonitorAccessTokens={false}
+  removeTokenFromUrlFunction={removeTokenFromUrlFunction}
 >
   // Contents of your app
 </OidcJwtProvider>

@@ -3,15 +3,17 @@ import { UseStore } from 'zustand';
 
 import {
   createOidcJwtClientStore,
-  OidcJwtClientStoreOptions,
+  OidcJwtClientOptions,
   UseOidcJwtClientStore,
 } from './store';
+import { removeTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface OidcJwtProviderProps {
-  client: OidcJwtClientStoreOptions;
+  client: OidcJwtClientOptions;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
+  removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 interface OidcJwtContextData {
@@ -33,13 +35,14 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     client: options,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
+    removeTokenFromUrlFunction = removeTokenFromUrl,
     children,
   } = props;
 
   const contextRef = useRef<OidcJwtContextData>();
   if (!contextRef.current) {
     contextRef.current = {
-      useStore: createOidcJwtClientStore(options),
+      useStore: createOidcJwtClientStore(options, removeTokenFromUrlFunction),
     };
   }
 

@@ -1,7 +1,7 @@
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
-import { buildQuerystring, HttpError, removeTokenFromUrl, stripTokenFromUrl } from './utils';
+import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface Params {
@@ -154,22 +154,24 @@ export type UseOidcJwtClientStore = {
   methods: StoreMethods;
 };
 
-export interface OidcJwtClientStoreOptions {
+export interface OidcJwtClientOptions {
   url: string;
   defaultAuthConfig?: Params;
-  removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
-function createOidcJwtClientStore(options: OidcJwtClientStoreOptions): UseStore<UseOidcJwtClientStore> {
+function createOidcJwtClientStore(
+  options: OidcJwtClientOptions,
+  removeTokenFromUrlFunction: (url: string) => void,
+): UseStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
       defaultAuthConfig: options.defaultAuthConfig || {},
-      removeTokenFromUrlFunction: options.removeTokenFromUrlFunction || removeTokenFromUrl,
+      removeTokenFromUrlFunction,
 
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
