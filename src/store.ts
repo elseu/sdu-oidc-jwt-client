@@ -265,11 +265,10 @@ function createOidcJwtClientStore(
             return Promise.resolve();
           }
 
-          if (hasTokenFromUrl) {
-            removeTokenFromUrl();
-          }
-
           return getUserInfo<User>().then((user) => {
+            if (hasTokenFromUrl) {
+              removeTokenFromUrl();
+            }
             if (!user || !Object.keys(user).length) {
               setInitialized(true);
               return;
