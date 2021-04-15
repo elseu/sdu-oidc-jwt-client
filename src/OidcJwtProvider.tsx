@@ -6,12 +6,14 @@ import {
   OidcJwtClientOptions,
   UseOidcJwtClientStore,
 } from './store';
+import { removeTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
+  removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 interface OidcJwtContextData {
@@ -33,31 +35,31 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     client: options,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
+    removeTokenFromUrlFunction = removeTokenFromUrl,
     children,
   } = props;
 
   const contextRef = useRef<OidcJwtContextData>();
   if (!contextRef.current) {
     contextRef.current = {
-      useStore: createOidcJwtClientStore(options),
+      useStore: createOidcJwtClientStore(options, removeTokenFromUrlFunction),
     };
   }
 
   const { useStore } = contextRef.current;
 
   const {
-    getSessionToken,
+    getCsrfToken,
     authorize,
     loadInitialData,
     monitorAccessToken,
     stopMonitoringAccessToken,
   } = useStore(state => state.methods);
-
   const isLoggedIn = useStore(state => state.isLoggedIn);
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData]);
+  }, [shouldAttemptLogin, loadInitialData]);
 
   useEffect(() => {
     if (!isLoggedIn || !shouldMonitorAccessTokens) return;
@@ -68,12 +70,12 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
 
   useEffect(() => {
-    const hasCsrfToken = !!getSessionToken();
+    const { csrfToken } = getCsrfToken();
 
-    if (isSSR || isLoggedIn || !shouldAttemptLogin || hasCsrfToken) return;
+    if (isSSR || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
     authorize({ prompt: 'none' });
-  }, [authorize, getSessionToken, isLoggedIn, shouldAttemptLogin]);
+  }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
 
   return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };

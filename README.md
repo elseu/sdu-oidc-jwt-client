@@ -15,6 +15,37 @@ Fetch JWTs for API access from oidc-jwt-provider
 </OidcJwtProvider>
 ```
 
+When you come back after authorization to your app it will have a token in the url like this `?token=`.
+To replace this token we use `window.history.replaceState()` by default.
+If you would like to replace this behaviour you could send a custom `removeTokenFromUrlFunction`.
+
+In NextJS you could create a helper function like this:
+```tsx
+// removeTokenFromUrlFunction.ts
+import Router from 'next/router';
+import { stripTokenFromUrl } from 'oidc-jwt-client';
+
+const removeTokenFromUrlFunction = (url: string) => {
+  const urlWithoutToken = stripTokenFromUrl(url);
+  Router.replace(urlWithoutToken, undefined, { shallow: true });
+};
+
+export { removeTokenFromUrlFunction };
+```
+
+And then use it like this:
+```tsx
+// App.tsx
+<OidcJwtProvider
+  client={{ url: 'https://api-auth.acc.titan.awssdu.nl'  }}
+  shouldAttemptLogin={false}
+  shouldMonitorAccessTokens={false}
+  removeTokenFromUrlFunction={removeTokenFromUrlFunction}
+>
+  // Contents of your app
+</OidcJwtProvider>
+```
+
 ### Fetch an accessToken
 Within the provider we make use of several hooks to use the functionality exposed within the context.
 
