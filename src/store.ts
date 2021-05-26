@@ -359,12 +359,18 @@ function createOidcJwtClientStore(
 
         monitorAccessToken(): void {
           const { accessTokenCache, methods: { fetchAccessToken } } = get();
-
+          // so, accessTokenCache, holds the OLD promise at this point (if first is false)
+          // at the end of the token life-cycle.
           const updateToken = (first = false) => {
             if ((first && !accessTokenCache) || !first) {
+              // But... fetchAccessToken updates the accessTokenCache immediately with a new promise
               fetchAccessToken();
             }
-            accessTokenCache?.then(accessTokenCacheHandler);
+            // let's get the new accessTokenCache promise here
+            // and when that promise is solved, we can schedule a timer using the accessTokenCacheHandler,
+            // to do a token update when the new token expires
+            const accessTokenCacheNew = get().accessTokenCache;
+            accessTokenCacheNew?.then(accessTokenCacheHandler);
           };
 
           const accessTokenCacheHandler = (cache: AccessTokenCache<any>) => {
@@ -372,9 +378,11 @@ function createOidcJwtClientStore(
 
             // Update the token some 10 seconds before it expires.
             const now = new Date().getTime();
-            const tokenUpdateTimestamp = cache.validUntil - 1000;
+            // that'll be uhh, 10000 ms
+            const tokenUpdateTimestamp = cache.validUntil - 10000;
+            // Let's do sanity 10 secs as minimum to not bombard the server if
+            // there is a mistake in the token expiration.
             const timeoutMs = Math.max(10000, tokenUpdateTimestamp - now);
-
             // Set a timeout to fetch a new token in X seconds.
             set({ monitorAccessTokenTimeout: setTimeout(() => updateToken(false), timeoutMs) });
           };
