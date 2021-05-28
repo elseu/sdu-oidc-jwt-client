@@ -121,4 +121,3 @@ Checking if the users session has expired
 const isSessionExpired = useAuthSessionExpired();
 console.log('Is the users session expired? ', isSessionExpired)
 ```
-
