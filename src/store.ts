@@ -31,7 +31,7 @@ export interface InitializedData<Claims extends ClaimsBase, User> {
 }
 
 interface StoreMethods {
-  resetStorage: () => void;
+  resetStorage: (resetCsrfToken?: boolean) => void;
   logout: (params?: Params) => void;
   authorize: (params?: Params) => void;
 
@@ -229,9 +229,10 @@ function createOidcJwtClientStore(
           window.location.href = `${baseUrl}/authorize?${buildQuerystring(queryParams)}`;
         },
 
-        resetStorage() {
+        resetStorage(resetCsrfToken = false) {
           Storage.unset(LOGGED_IN_TOKEN_STORAGE_KEY);
           Storage.unset(USER_INFO_TOKEN_STORAGE_KEY);
+          if (resetCsrfToken) Storage.unset(CSRF_TOKEN_STORAGE_KEY);
         },
 
         logout(params: Params = {}) {
@@ -255,8 +256,14 @@ function createOidcJwtClientStore(
               getUserInfo,
               removeTokenFromUrl,
               setInitialized,
+              resetStorage,
             },
           } = get();
+
+          // Detect old NDFR token redirect url
+          if (window.location.href.includes('ndfrtoken=true')) {
+            resetStorage(true);
+          }
 
           const { csrfToken, hasTokenFromUrl } = getCsrfToken();
 
