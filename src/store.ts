@@ -256,14 +256,8 @@ function createOidcJwtClientStore(
               getUserInfo,
               removeTokenFromUrl,
               setInitialized,
-              resetStorage,
             },
           } = get();
-
-          // Detect old NDFR token redirect url
-          if (window.location.href.includes('ndfrtoken=true')) {
-            resetStorage(true);
-          }
 
           const { csrfToken, hasTokenFromUrl } = getCsrfToken();
 
