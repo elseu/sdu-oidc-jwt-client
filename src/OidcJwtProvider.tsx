@@ -47,7 +47,6 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   }
 
   const { useStore } = contextRef.current;
-
   const {
     getCsrfToken,
     authorize,
@@ -71,11 +70,14 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   useEffect(() => {
     const { csrfToken } = getCsrfToken();
-
     if (isSSR || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
     authorize({ prompt: 'none' });
   }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
+
+  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && !isSSR) {
+    return null;
+  }
 
   return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
 };
