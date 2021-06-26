@@ -147,6 +147,7 @@ export type UseOidcJwtClientStore = {
   userInfoCache?: any;
   userInfo: any;
   csrfToken: string | null;
+  csrfTokenMethod: CsrfTokenMethod;
 
   isLoggedIn: boolean;
   isInitialized: boolean;
@@ -156,7 +157,13 @@ export type UseOidcJwtClientStore = {
 
 export interface OidcJwtClientOptions {
   url: string;
+  csrfTokenMethod?: CsrfTokenMethod;
   defaultAuthConfig?: Params;
+}
+
+export enum CsrfTokenMethod {
+  HEADER,
+  QUERYSTRING
 }
 
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
@@ -178,6 +185,7 @@ function createOidcJwtClientStore(
       userInfoCache: undefined,
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
+      csrfTokenMethod: options.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
 
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
 
@@ -199,16 +207,21 @@ function createOidcJwtClientStore(
         },
 
         fetchJsonWithAuth<T>(url: string): Promise<T> {
-          const { baseUrl, csrfToken } = get();
+          const { baseUrl, csrfToken, csrfTokenMethod } = get();
 
-          const config = {
-            headers: {
-              Authorization: `Bearer ${csrfToken}`,
-            },
+          let fullUrl = `${baseUrl}${url}`;
+          const config: RequestInit = {
             credentials: 'include' as RequestCredentials,
           };
+          if (csrfTokenMethod === CsrfTokenMethod.QUERYSTRING) {
+            fullUrl += '?' + buildQuerystring({ token: csrfToken ?? '' });
+          } else {
+            config.headers = {
+              Authorization: `Bearer ${csrfToken}`,
+            };
+          }
 
-          return fetch(`${baseUrl}${url}`, config).then<T>(response => {
+          return fetch(fullUrl, config).then<T>(response => {
             if (!response.ok) {
               throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
             }
