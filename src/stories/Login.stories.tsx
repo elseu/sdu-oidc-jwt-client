@@ -11,6 +11,7 @@ import {
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
+import { CsrfTokenMethod } from '../store';
 
 interface TemplateProps {
   url: string;
@@ -28,7 +29,7 @@ const Template: Story<TemplateProps> = (props: TemplateProps) => {
   } = props;
   return (
     <OidcJwtProvider
-      client={{ url }}
+      client={{ url, csrfTokenMethod: CsrfTokenMethod.HEADER }}
       shouldAttemptLogin={shouldAttemptLogin}
       shouldMonitorAccessTokens={shouldMonitorAccessTokens}
     >
