@@ -213,12 +213,15 @@ function createOidcJwtClientStore(
           const config: RequestInit = {
             credentials: 'include' as RequestCredentials,
           };
-          if (csrfTokenMethod === CsrfTokenMethod.QUERYSTRING) {
-            fullUrl += '?' + buildQuerystring({ token: csrfToken ?? '' });
-          } else {
-            config.headers = {
-              Authorization: `Bearer ${csrfToken}`,
-            };
+          switch (csrfTokenMethod) {
+            case CsrfTokenMethod.QUERYSTRING:
+              fullUrl += '?' + buildQuerystring({ token: csrfToken ?? '' });
+              break;
+            case CsrfTokenMethod.HEADER:
+              config.headers = {
+                Authorization: `Bearer ${csrfToken}`,
+              };
+              break;
           }
 
           return fetch(fullUrl, config).then<T>(response => {
