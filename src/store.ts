@@ -135,6 +135,7 @@ interface StoreMethods {
    * Fetch wrapper
    */
   fetchJsonWithAuth<T>(url: string): Promise<T>;
+  getFetchRequest(url: string): { config?: RequestInit; input: RequestInfo };
 }
 
 export type UseOidcJwtClientStore = {
@@ -206,25 +207,38 @@ function createOidcJwtClientStore(
           });
         },
 
-        fetchJsonWithAuth<T>(url: string): Promise<T> {
+        getFetchRequest(url: string): { config?: RequestInit; input: RequestInfo } {
           const { baseUrl, csrfToken, csrfTokenMethod } = get();
 
-          let fullUrl = `${baseUrl}${url}`;
-          const config: RequestInit = {
+          const defaultConfig: RequestInit = {
             credentials: 'include' as RequestCredentials,
           };
+
           switch (csrfTokenMethod) {
             case CsrfTokenMethod.QUERYSTRING:
-              fullUrl += '?' + buildQuerystring({ token: csrfToken ?? '' });
-              break;
-            case CsrfTokenMethod.HEADER:
-              config.headers = {
-                Authorization: `Bearer ${csrfToken}`,
+              return {
+                input: `${baseUrl}${url}?${buildQuerystring({ token: csrfToken ?? '' })}`,
+                config: defaultConfig,
               };
-              break;
+            case CsrfTokenMethod.HEADER:
+              return {
+                input: `${baseUrl}${url}`,
+                config: {
+                  ...defaultConfig,
+                  headers: {
+                    Authorization: `Bearer ${csrfToken}`,
+                  },
+                },
+              };
           }
+        },
 
-          return fetch(fullUrl, config).then<T>(response => {
+        fetchJsonWithAuth<T>(url: string): Promise<T> {
+          const { methods: { getFetchRequest } } = get();
+
+          const { config, input } = getFetchRequest(url);
+
+          return fetch(input, config).then<T>(response => {
             if (!response.ok) {
               throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
             }
