@@ -1,7 +1,8 @@
+import queryString from 'query-string';
 import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
-import { buildQuerystring, HttpError, stripTokenFromUrl } from './utils';
+import { HttpError, stripTokenFromUrl } from './utils';
 import { isSSR } from './utils/isSSR';
 
 export interface Params {
@@ -217,7 +218,7 @@ function createOidcJwtClientStore(
           switch (csrfTokenMethod) {
             case CsrfTokenMethod.QUERYSTRING:
               return {
-                input: `${baseUrl}${url}?${buildQuerystring({ token: csrfToken ?? '' })}`,
+                input: queryString.stringifyUrl({ url: `${baseUrl}${url}`, query: { token: csrfToken ?? '' } }),
                 config: defaultConfig,
               };
             case CsrfTokenMethod.HEADER:
@@ -249,14 +250,14 @@ function createOidcJwtClientStore(
         authorize(params: Params = {}) {
           const { defaultAuthConfig, baseUrl, methods: { resetStorage } } = get();
 
-          const queryParams = { ...defaultAuthConfig, ...params };
-          if (!queryParams.redirect_uri) {
-            queryParams.redirect_uri = stripTokenFromUrl(window.location.href);
+          const query = { ...defaultAuthConfig, ...params };
+          if (!query.redirect_uri) {
+            query.redirect_uri = stripTokenFromUrl(window.location.href);
           }
 
           resetStorage();
 
-          window.location.href = `${baseUrl}/authorize?${buildQuerystring(queryParams)}`;
+          window.location.href = queryString.stringifyUrl({ url: `${baseUrl}/authorize`, query });
         },
 
         resetStorage(resetCsrfToken = false) {
@@ -269,13 +270,13 @@ function createOidcJwtClientStore(
           const { baseUrl, methods: { resetStorage } } = get();
 
           const post_logout_redirect_uri = params.post_logout_redirect_uri || window.location.href;
-          const queryParams = {
+          const query = {
             ...params,
             post_logout_redirect_uri,
           };
 
           resetStorage();
-          window.location.href = `${baseUrl}/logout?${buildQuerystring(queryParams)}`;
+          window.location.href = queryString.stringifyUrl({ url: `${baseUrl}/logout`, query });
         },
 
         loadInitialData<Claims extends ClaimsBase, User>(): Promise<void> {
