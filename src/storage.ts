@@ -1,4 +1,5 @@
 /* eslint-disable max-len */
+import { getLocalStorageSize } from './utils/getLocalStorageSize';
 import { isQuotaExceeded } from './utils/isQuotaExceeded';
 import { isSSR } from './utils/isSSR';
 import { parseJson } from './utils/parseJson';
@@ -17,8 +18,9 @@ export class Storage {
       return localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
       const entries = Object.entries(localStorage).map(([key, value]) => `${key}:${value.length}`);
+      const storageSize = getLocalStorageSize();
       if (isQuotaExceeded(error)) {
-        throw new Error(`LocalStorage full for value: ${JSON.stringify(value)} - entries: ${JSON.stringify(entries)} - error: ${error}`);
+        throw new Error(`LocalStorage full for value: ${JSON.stringify(value)} - entries: ${JSON.stringify(entries)} - error: ${error} - size: ${storageSize}`);
       }
       throw new Error(`LocalStorage failed for value: ${JSON.stringify(value)} - entries: ${JSON.stringify(entries)} - error: ${error}`);
     }
