@@ -1,3 +1,4 @@
+import { isQuotaExceeded } from './utils/isQuotaExceeded';
 import { isSSR } from './utils/isSSR';
 import { parseJson } from './utils/parseJson';
 
@@ -11,8 +12,14 @@ export class Storage {
 
   static set<T>(key: string, value: T) {
     if (isSSR) return;
-
-    return localStorage.setItem(key, JSON.stringify(value));
+    try {
+      return localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      if (isQuotaExceeded(error)) {
+        throw new Error(`LocalStorage full for data: ${JSON.stringify(value)}, because: ${error}`);
+      }
+      throw new Error(`LocalStorage setItem failed for data: ${JSON.stringify(value)}, because: ${error}`);
+    }
   }
 
   static unset(key: string) {
