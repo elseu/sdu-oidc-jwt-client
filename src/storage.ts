@@ -20,9 +20,9 @@ export class Storage {
       const entries = Object.entries(localStorage).map(([key, value]) => `${key}:${value.length}`);
       const storageSize = getLocalStorageSize();
       if (isQuotaExceeded(error)) {
-        throw new Error(`LocalStorage full for value: ${JSON.stringify(value)} - entries: ${JSON.stringify(entries)} - error: ${error} - size: ${storageSize}`);
+        throw new Error(`LocalStorage full for key: "${key}" and value: "${JSON.stringify(value)}" - entries: ${JSON.stringify(entries)} - error: ${error} - size: ${storageSize}`);
       }
-      throw new Error(`LocalStorage failed for value: ${JSON.stringify(value)} - entries: ${JSON.stringify(entries)} - error: ${error}`);
+      throw new Error(`LocalStorage failed for key: "${key}" and value: "${JSON.stringify(value)}" - entries: ${JSON.stringify(entries)} - error: ${error}`);
     }
   }
 
