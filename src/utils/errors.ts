@@ -5,8 +5,8 @@ interface HttpErrorInput {
 }
 
 export class HttpError extends Error {
-  statusCode: number
-  response?: Response
+  statusCode: number;
+  response?: Response;
 
   constructor(input: HttpErrorInput) {
     super(input.message);
