@@ -51,5 +51,6 @@ jobs:
           extra_plugins: semantic-release-slack-bot@1.6.2
         id: semantic
         env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
