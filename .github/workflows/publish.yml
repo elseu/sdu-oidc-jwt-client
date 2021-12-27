@@ -20,6 +20,12 @@ jobs:
         run: npm ci
       - name: NPM build
         run: npm run build
+      - name: Archive build artifacts
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release'
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
 
   deploy_npm:
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release'
