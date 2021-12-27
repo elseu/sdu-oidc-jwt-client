@@ -74,16 +74,7 @@
       "@semantic-release/npm",
       "@semantic-release/github",
       "@semantic-release/commit-analyzer",
-      "@semantic-release/release-notes-generator",
-      [
-        "semantic-release-slack-bot",
-        {
-          "notifyOnSuccess": true,
-          "notifyOnFail": true,
-          "packageName": "oidc-jwt-client",
-          "markdownReleaseNotes": true
-        }
-      ]
+      "@semantic-release/release-notes-generator"
     ]
   },
   "browserslist": {
