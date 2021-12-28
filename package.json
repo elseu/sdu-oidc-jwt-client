@@ -26,8 +26,7 @@
     "build": "npm run clean && npm run build:rollup && npm run build:types",
     "clean": "rimraf dist; rollup -c; rimraf \"dist/**/*.stories.d.ts\"; rimraf \"dist/stories\"",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook",
-    "prepublishOnly": "npm run build"
+    "build-storybook": "build-storybook"
   },
   "devDependencies": {
     "@babel/core": "^7.16.5",
