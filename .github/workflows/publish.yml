@@ -10,12 +10,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - name: Checkout repository
+        uses: actions/checkout@master
+      - name: Set up Node.js
+        uses: actions/setup-node@master
         with:
-          node-version: "11.x"
-      - run: npm install
-      - run: npm run deploy
+          node-version: "14.x"      
+      - name: NPM install
+        run: npm ci
+      - name: NPM build
+        run: npm run build
+      - name: Archive build artifacts
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release'
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+  deploy_npm:
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release'
+    needs: [ build ]
+    env:
+      BRANCH: ${{ github.ref }}
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@master
+      - name: Set up Node.js
+        uses: actions/setup-node@master
+        with:
+          node-version: 14.x
+      - uses: actions/download-artifact@master
+        with:
+          name: dist
+          path: dist
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v2
+        with:
+          semantic_version: 17.0.4
+          extra_plugins: semantic-release-slack-bot@1.6.2
+        id: semantic
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
