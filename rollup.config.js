@@ -1,4 +1,4 @@
-import createDefaultRollupConfig from 'sdu-react-scripts/config/rollup';
+import createDefaultRollupConfig from '@elseu/sdu-react-scripts-rollup';
 
 import pkg from './package.json';
 

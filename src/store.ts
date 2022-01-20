@@ -1,9 +1,8 @@
 import queryString from 'query-string';
-import create, { UseStore } from 'zustand';
+import create, { UseBoundStore } from 'zustand';
 
-import { Storage } from './storage';
+import { storage } from './storage/storage';
 import { HttpError, stripTokenFromUrl } from './utils';
-import { isSSR } from './utils/isSSR';
 
 export interface Params {
   [key: string]: string;
@@ -148,7 +147,7 @@ export type UseOidcJwtClientStore = {
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
   userInfoCache?: any;
   userInfo: any;
-  csrfToken: string | null;
+  csrfToken?: string;
   csrfTokenMethod: CsrfTokenMethod;
 
   isLoggedIn: boolean;
@@ -168,14 +167,20 @@ export enum CsrfTokenMethod {
   QUERYSTRING
 }
 
+export enum StorageType {
+  COOKIES = 'cookies',
+  LOCALSTORAGE = 'localStorage'
+}
+
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 
 function createOidcJwtClientStore(
   options: OidcJwtClientOptions,
+  storageType: StorageType,
   removeTokenFromUrlFunction: (url: string) => void,
-): UseStore<UseOidcJwtClientStore> {
+): UseBoundStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
@@ -185,11 +190,11 @@ function createOidcJwtClientStore(
       monitorAccessTokenTimeout: null,
       accessTokenCache: undefined,
       userInfoCache: undefined,
-      userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
-      csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
+      userInfo: storage[storageType].get(USER_INFO_TOKEN_STORAGE_KEY),
+      csrfToken: storage[storageType].get(CSRF_TOKEN_STORAGE_KEY),
       csrfTokenMethod: options.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
 
-      isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
+      isLoggedIn: !!storage[storageType].get(LOGGED_IN_TOKEN_STORAGE_KEY),
 
       isInitialized: false,
 
@@ -201,7 +206,7 @@ function createOidcJwtClientStore(
         },
 
         setIsLoggedIn(isLoggedIn: boolean) {
-          Storage.set(LOGGED_IN_TOKEN_STORAGE_KEY, isLoggedIn);
+          storage[storageType].set(LOGGED_IN_TOKEN_STORAGE_KEY, isLoggedIn);
           set({
             isLoggedIn,
             ...(!isLoggedIn ? { userInfoCache: undefined } : {}),
@@ -261,9 +266,9 @@ function createOidcJwtClientStore(
         },
 
         resetStorage(resetCsrfToken = false) {
-          Storage.unset(LOGGED_IN_TOKEN_STORAGE_KEY);
-          Storage.unset(USER_INFO_TOKEN_STORAGE_KEY);
-          if (resetCsrfToken) Storage.unset(CSRF_TOKEN_STORAGE_KEY);
+          storage[storageType].unset(LOGGED_IN_TOKEN_STORAGE_KEY);
+          storage[storageType].unset(USER_INFO_TOKEN_STORAGE_KEY);
+          if (resetCsrfToken) storage[storageType].unset(CSRF_TOKEN_STORAGE_KEY);
         },
 
         logout(params: Params = {}) {
@@ -312,12 +317,15 @@ function createOidcJwtClientStore(
 
         removeTokenFromUrl(): void {
           const { removeTokenFromUrlFunction } = get();
+
+          if (typeof window === 'undefined') return;
+
           removeTokenFromUrlFunction(window.location.href);
         },
 
         getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean} {
           const { csrfToken, methods: { setSessionToken } } = get();
-          const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+          const [, token] = (typeof window !== 'undefined' && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
           const receivedToken = token || csrfToken || null;
 
@@ -361,7 +369,7 @@ function createOidcJwtClientStore(
         },
 
         setUserInfo<T>(userInfo: T) {
-          Storage.set(USER_INFO_TOKEN_STORAGE_KEY, userInfo);
+          storage[storageType].set(USER_INFO_TOKEN_STORAGE_KEY, userInfo);
           set({ userInfo });
         },
 
@@ -429,7 +437,7 @@ function createOidcJwtClientStore(
         },
 
         setSessionToken(token: string): void {
-          Storage.set(CSRF_TOKEN_STORAGE_KEY, token);
+          storage[storageType].set(CSRF_TOKEN_STORAGE_KEY, token);
           set({ csrfToken: token });
         },
 

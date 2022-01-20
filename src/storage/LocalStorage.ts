@@ -1,19 +1,18 @@
 /* eslint-disable max-len */
-import { getLocalStorageSize } from './utils/getLocalStorageSize';
-import { isQuotaExceeded } from './utils/isQuotaExceeded';
-import { isSSR } from './utils/isSSR';
-import { parseJson } from './utils/parseJson';
+import { getLocalStorageSize } from '../utils/getLocalStorageSize';
+import { isQuotaExceeded } from '../utils/isQuotaExceeded';
+import { parseJson } from '../utils/parseJson';
 
-export class Storage {
-  static get(key: string) {
-    if (isSSR) return;
+export class LocalStorage {
+  static get(key: string): string | undefined {
+    if (typeof window === 'undefined') return;
 
     const value = localStorage.getItem(key);
-    return value === null ? null : parseJson(value);
+    return value === null ? undefined : parseJson(value);
   }
 
-  static set<T>(key: string, value: T) {
-    if (isSSR) return;
+  static set<T>(key: string, value: T): void {
+    if (typeof window === 'undefined') return;
     try {
       return localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
@@ -26,24 +25,16 @@ export class Storage {
     }
   }
 
-  static unset(key: string) {
-    if (isSSR) return;
+  static unset(key: string): void {
+    if (typeof window === 'undefined') return;
 
     if (this.isset(key)) {
-      return localStorage.removeItem(key);
-    } else {
-      return null;
+      localStorage.removeItem(key);
     }
   }
 
-  static clear() {
-    if (isSSR) return;
-
-    return localStorage.clear();
-  }
-
-  static isset(key: string) {
-    if (isSSR) return;
+  static isset(key: string): boolean {
+    if (typeof window === 'undefined') return false;
 
     return this.get(key) !== null;
   }

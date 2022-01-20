@@ -1,5 +1,5 @@
 module.exports = {
-  extends: ['./node_modules/sdu-react-scripts/config/eslint'], 
+  extends: ['./node_modules/@elseu/sdu-react-scripts-eslint'], 
   parserOptions: {
     project: './tsconfig.json',
   },

@@ -1,4 +1,4 @@
 export * from './hooks';
 export * from './OidcJwtProvider';
-export { CsrfTokenMethod } from './store';
+export { CsrfTokenMethod, StorageType } from './store';
 export { stripTokenFromUrl } from './utils';

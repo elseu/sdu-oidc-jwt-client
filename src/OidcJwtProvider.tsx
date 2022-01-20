@@ -1,23 +1,24 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { UseStore } from 'zustand';
+import { UseBoundStore } from 'zustand';
 
 import {
   createOidcJwtClientStore,
   OidcJwtClientOptions,
+  StorageType,
   UseOidcJwtClientStore,
 } from './store';
 import { removeTokenFromUrl } from './utils';
-import { isSSR } from './utils/isSSR';
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
+  storage?: StorageType;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
   removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 interface OidcJwtContextData {
-  useStore: UseStore<UseOidcJwtClientStore>;
+  useStore: UseBoundStore<UseOidcJwtClientStore>;
 }
 
 const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
@@ -33,6 +34,7 @@ function useOidcJwtContext(): OidcJwtContextData {
 const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const {
     client: options,
+    storage = StorageType.LOCALSTORAGE,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
     removeTokenFromUrlFunction = removeTokenFromUrl,
@@ -42,7 +44,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const contextRef = useRef<OidcJwtContextData>();
   if (!contextRef.current) {
     contextRef.current = {
-      useStore: createOidcJwtClientStore(options, removeTokenFromUrlFunction),
+      useStore: createOidcJwtClientStore(options, storage, removeTokenFromUrlFunction),
     };
   }
 
@@ -70,12 +72,12 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   useEffect(() => {
     const { csrfToken } = getCsrfToken();
-    if (isSSR || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
+    if (typeof window === 'undefined' || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
     authorize({ prompt: 'none' });
   }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
 
-  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && !isSSR) {
+  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && typeof window !== 'undefined') {
     return null;
   }
 
