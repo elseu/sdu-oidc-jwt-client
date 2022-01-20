@@ -1,22 +1,24 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { UseStore } from 'zustand';
+import { UseBoundStore } from 'zustand';
 
 import {
   createOidcJwtClientStore,
   OidcJwtClientOptions,
+  StorageType,
   UseOidcJwtClientStore,
 } from './store';
 import { removeTokenFromUrl } from './utils';
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
+  storage?: StorageType;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
   removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 interface OidcJwtContextData {
-  useStore: UseStore<UseOidcJwtClientStore>;
+  useStore: UseBoundStore<UseOidcJwtClientStore>;
 }
 
 const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
@@ -32,6 +34,7 @@ function useOidcJwtContext(): OidcJwtContextData {
 const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const {
     client: options,
+    storage = StorageType.LOCALSTORAGE,
     shouldAttemptLogin = false,
     shouldMonitorAccessTokens = true,
     removeTokenFromUrlFunction = removeTokenFromUrl,
@@ -41,7 +44,7 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const contextRef = useRef<OidcJwtContextData>();
   if (!contextRef.current) {
     contextRef.current = {
-      useStore: createOidcJwtClientStore(options, removeTokenFromUrlFunction),
+      useStore: createOidcJwtClientStore(options, storage, removeTokenFromUrlFunction),
     };
   }
 
