@@ -13,6 +13,7 @@ function stripTokenFromUrl(href: string): string {
 }
 
 function removeTokenFromUrl(href: string): void {
+  if (typeof window === 'undefined') return;
   const urlWithoutToken = stripTokenFromUrl(href);
   window.history.replaceState({}, '', urlWithoutToken);
 }

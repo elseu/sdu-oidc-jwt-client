@@ -3,7 +3,6 @@ import create, { UseStore } from 'zustand';
 
 import { Storage } from './storage';
 import { HttpError, stripTokenFromUrl } from './utils';
-import { isSSR } from './utils/isSSR';
 
 export interface Params {
   [key: string]: string;
@@ -312,12 +311,15 @@ function createOidcJwtClientStore(
 
         removeTokenFromUrl(): void {
           const { removeTokenFromUrlFunction } = get();
+
+          if (typeof window === 'undefined') return;
+
           removeTokenFromUrlFunction(window.location.href);
         },
 
         getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean} {
           const { csrfToken, methods: { setSessionToken } } = get();
-          const [, token] = (!isSSR && window.location.search.match(/[?&]token=([^&]+)/)) || [];
+          const [, token] = (typeof window !== 'undefined' && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
           const receivedToken = token || csrfToken || null;
 

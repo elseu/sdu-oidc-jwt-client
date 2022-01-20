@@ -7,7 +7,6 @@ import {
   UseOidcJwtClientStore,
 } from './store';
 import { removeTokenFromUrl } from './utils';
-import { isSSR } from './utils/isSSR';
 
 export interface OidcJwtProviderProps {
   client: OidcJwtClientOptions;
@@ -70,12 +69,12 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
 
   useEffect(() => {
     const { csrfToken } = getCsrfToken();
-    if (isSSR || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
+    if (typeof window === 'undefined' || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
     authorize({ prompt: 'none' });
   }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
 
-  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && !isSSR) {
+  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && typeof window !== 'undefined') {
     return null;
   }
 
