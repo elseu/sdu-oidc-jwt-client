@@ -1,5 +1,5 @@
 import queryString from 'query-string';
-import create, { UseStore } from 'zustand';
+import create, { UseBoundStore } from 'zustand';
 
 import { Storage } from './storage';
 import { HttpError, stripTokenFromUrl } from './utils';
@@ -174,7 +174,7 @@ const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 function createOidcJwtClientStore(
   options: OidcJwtClientOptions,
   removeTokenFromUrlFunction: (url: string) => void,
-): UseStore<UseOidcJwtClientStore> {
+): UseBoundStore<UseOidcJwtClientStore> {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
