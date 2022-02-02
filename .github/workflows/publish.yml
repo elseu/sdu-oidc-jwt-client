@@ -12,11 +12,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@master
-      - name: Set up Node.js
-        uses: actions/setup-node@master
+      - name: Cache NPM downloads
+        uses: actions/cache@v1
         with:
-          node-version: "14.x"      
+          path: ~/.npm
+          key: ${{ runner.os }}-node-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-npm
+      - name: Cache node modules
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: 14.x
+      - name: Setup NPM Registry
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm config set @elseu:registry https://npm.pkg.github.com/
       - name: NPM install
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
       - name: NPM build
         run: npm run build
