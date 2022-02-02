@@ -28,6 +28,10 @@ jobs:
       - uses: actions/setup-node@v2-beta
         with:
           node-version: 14.x
+      - uses: jgierer12/npm-auth-gpr@v1
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup NPM Registry
         if: steps.cache.outputs.cache-hit != 'true'
         run: npm config set @elseu:registry https://npm.pkg.github.com/
