@@ -64,6 +64,17 @@ function useAuthSessionExpired(): boolean {
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
+  const checkSessionExpired = useCallback(() => {
+    Storage.unset(RETRY_LOGIN_STORAGE_KEY);
+    if (!isLoggedIn) setSessionExpired(true);
+  }, [isLoggedIn]);
+
+  const retryLogin = useCallback(() => {
+    resetStorage();
+    Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
+    authorize({ prompt: 'none' });
+  }, [authorize, resetStorage]);
+
   useEffect(() => {
     const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
     const shouldRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
@@ -74,8 +85,7 @@ function useAuthSessionExpired(): boolean {
      * and remove the retry item from localStorage
      */
     if (shouldRetryLogin) {
-      if (!isLoggedIn) setSessionExpired(isFirstSessionExpired);
-      Storage.unset(RETRY_LOGIN_STORAGE_KEY);
+      checkSessionExpired();
       return;
     }
 
@@ -85,11 +95,9 @@ function useAuthSessionExpired(): boolean {
      * and then retry the login silently
      */
     if (isFirstSessionExpired) {
-      resetStorage();
-      Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
-      authorize({ prompt: 'none' });
+      retryLogin();
     }
-  }, [authorize, isLoggedIn, isPrevLoggedIn, resetStorage]);
+  }, [authorize, checkSessionExpired, isLoggedIn, isPrevLoggedIn, resetStorage, retryLogin]);
 
   return isSessionExpired;
 }
