@@ -97,7 +97,7 @@ function useAuthSessionExpired(): boolean {
     if (isFirstSessionExpired) {
       retryLogin();
     }
-  }, [authorize, checkSessionExpired, isLoggedIn, isPrevLoggedIn, resetStorage, retryLogin]);
+  }, [checkSessionExpired, isLoggedIn, isPrevLoggedIn, retryLogin]);
 
   return isSessionExpired;
 }
