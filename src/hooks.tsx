@@ -3,7 +3,8 @@ import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
-import { ClaimsBase, Params } from './store';
+import { Storage } from './storage';
+import { ClaimsBase, Params, RETRY_LOGIN_STORAGE_KEY } from './store';
 
 interface IUseAuthControls {
   logout: (params?: Params) => void;
@@ -58,17 +59,37 @@ function useAuthSessionExpired(): boolean {
   const { useStore } = useOidcJwtContext();
 
   const resetStorage = useStore(state => state.methods.resetStorage);
+  const authorize = useStore(state => state.methods.authorize);
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
   useEffect(() => {
-    const isSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
-    if (!isSessionExpired) return;
+    const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
+    const shouldRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
 
-    setSessionExpired(isSessionExpired);
-    resetStorage();
-  }, [isLoggedIn, isPrevLoggedIn, resetStorage]);
+    /**
+     * When the user comes back in with the retry item in localStorage
+     * and they are still not logged in with Ping: sesssion expired
+     * and remove the retry item from localStorage
+     */
+    if (shouldRetryLogin) {
+      if (!isLoggedIn) setSessionExpired(isFirstSessionExpired);
+      Storage.unset(RETRY_LOGIN_STORAGE_KEY);
+      return;
+    }
+
+    /**
+     * When the login changes from logged in to not logged in:
+     * store in localStorage that we are going to retry the login
+     * and then retry the login silently
+     */
+    if (isFirstSessionExpired) {
+      resetStorage();
+      Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
+      authorize({ prompt: 'none' });
+    }
+  }, [authorize, isLoggedIn, isPrevLoggedIn, resetStorage]);
 
   return isSessionExpired;
 }
