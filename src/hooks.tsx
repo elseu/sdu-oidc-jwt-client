@@ -13,19 +13,19 @@ interface IUseAuthControls {
 
 function useAuthControls(): IUseAuthControls {
   const { useStore } = useOidcJwtContext();
-  const authorize = useStore(state => state.methods.authorize);
-  const logout = useStore(state => state.methods.logout);
+  const authorize = useStore((state) => state.methods.authorize);
+  const logout = useStore((state) => state.methods.logout);
   return { authorize, logout };
 }
 
 function useAuthInitialized(): boolean {
   const { useStore } = useOidcJwtContext();
-  return useStore(state => state.isInitialized);
+  return useStore((state) => state.isInitialized);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
-  const getUserInfo = useStore(state => state.methods.getUserInfo);
+  const getUserInfo = useStore((state) => state.methods.getUserInfo);
 
   const isLoggedIn = useAuthIsLoggedIn();
 
@@ -39,74 +39,79 @@ function useAuthUserInfo<T>(): AsyncState<T | null> {
 
 function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
   const { useStore } = useOidcJwtContext();
-  const getAccessToken = useStore(state => state.methods.getAccessToken);
+  const getAccessToken = useStore((state) => state.methods.getAccessToken);
   const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
     if (!isLoggedIn) {
       return Promise.resolve(null);
     }
-    return getAccessToken<T>().then(info => info?.claims ?? null);
+    return getAccessToken<T>().then((info) => info?.claims ?? null);
   }, [isLoggedIn]);
 }
 
 function useAuthIsLoggedIn(): boolean {
   const { useStore } = useOidcJwtContext();
-  return useStore(state => state.isLoggedIn);
+  return useStore((state) => state.isLoggedIn);
 }
 
 function useAuthSessionExpired(): boolean {
   const { useStore } = useOidcJwtContext();
 
-  const resetStorage = useStore(state => state.methods.resetStorage);
-  const authorize = useStore(state => state.methods.authorize);
-  const isLoggedIn = useStore(state => state.isLoggedIn);
+  const resetStorage = useStore((state) => state.methods.resetStorage);
+  const authorize = useStore((state) => state.methods.authorize);
+  const isLoggedIn = useStore((state) => state.isLoggedIn);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
   const checkSessionExpired = useCallback(() => {
     Storage.unset(RETRY_LOGIN_STORAGE_KEY);
-    if (!isLoggedIn) setSessionExpired(true);
+
+    setSessionExpired(!isLoggedIn);
   }, [isLoggedIn]);
 
   const retryLogin = useCallback(() => {
     resetStorage();
+
     Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
+
     authorize({ prompt: 'none' });
   }, [authorize, resetStorage]);
 
   useEffect(() => {
-    const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
-    const shouldRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
-
+    const didRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
     /**
      * When the user comes back in with the retry item in localStorage
      * and they are still not logged in with Ping: sesssion expired
      * and remove the retry item from localStorage
      */
-    if (shouldRetryLogin) {
+    if (didRetryLogin) {
       checkSessionExpired();
-      return;
     }
+  }, [checkSessionExpired]);
+
+  useEffect(() => {
+    const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
+    const didRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
 
     /**
      * When the login changes from logged in to not logged in:
      * store in localStorage that we are going to retry the login
      * and then retry the login silently
      */
-    if (isFirstSessionExpired) {
+    if (!isSessionExpired && !didRetryLogin && isFirstSessionExpired) {
       retryLogin();
     }
-  }, [checkSessionExpired, isLoggedIn, isPrevLoggedIn, retryLogin]);
+  }, [checkSessionExpired, isLoggedIn, isPrevLoggedIn, isSessionExpired, retryLogin]);
 
   return isSessionExpired;
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
   const { useStore } = useOidcJwtContext();
-  const getAccessToken = useStore(state => state.methods.getAccessToken);
+  const getAccessToken = useStore((state) => state.methods.getAccessToken);
   return useCallback(() => {
-    return getAccessToken().then(result => result?.token ?? null);
+    return getAccessToken().then((result) => result?.token ?? null);
   }, [getAccessToken]);
 }
 
