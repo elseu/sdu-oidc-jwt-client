@@ -3,8 +3,7 @@ import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
 import { useOidcJwtContext } from './OidcJwtProvider';
-import { Storage } from './storage';
-import { ClaimsBase, Params, RETRY_LOGIN_STORAGE_KEY } from './store';
+import { ClaimsBase, Params } from './store';
 
 interface IUseAuthControls {
   logout: (params?: Params) => void;
@@ -60,26 +59,26 @@ function useAuthSessionExpired(): boolean {
 
   const resetStorage = useStore((state) => state.methods.resetStorage);
   const authorize = useStore((state) => state.methods.authorize);
+  const unsetRetryLogin = useStore((state) => state.methods.unsetRetryLogin);
   const isLoggedIn = useStore((state) => state.isLoggedIn);
+  const didRetryLogin = useStore((state) => state.didRetryLogin);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
   const checkSessionExpired = useCallback(() => {
-    Storage.unset(RETRY_LOGIN_STORAGE_KEY);
+    // Remove retry login state
+    unsetRetryLogin();
 
+    // Set session expired
     setSessionExpired(!isLoggedIn);
-  }, [isLoggedIn]);
 
-  const retryLogin = useCallback(() => {
-    resetStorage();
-
-    Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
-
-    authorize({ prompt: 'none' });
-  }, [authorize, resetStorage]);
+    // Clear storage when session is expired
+    if (!isLoggedIn) {
+      resetStorage();
+    }
+  }, [isLoggedIn, resetStorage, unsetRetryLogin]);
 
   useEffect(() => {
-    const didRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
     /**
      * When the user comes back in with the retry item in localStorage
      * and they are still not logged in with Ping: sesssion expired
@@ -88,11 +87,10 @@ function useAuthSessionExpired(): boolean {
     if (didRetryLogin) {
       checkSessionExpired();
     }
-  }, [checkSessionExpired]);
+  }, [checkSessionExpired, didRetryLogin]);
 
   useEffect(() => {
     const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
-    const didRetryLogin = Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1;
 
     /**
      * When the login changes from logged in to not logged in:
@@ -100,9 +98,9 @@ function useAuthSessionExpired(): boolean {
      * and then retry the login silently
      */
     if (!isSessionExpired && !didRetryLogin && isFirstSessionExpired) {
-      retryLogin();
+      authorize({ prompt: 'none' }, { isRetrying: true });
     }
-  }, [checkSessionExpired, isLoggedIn, isPrevLoggedIn, isSessionExpired, retryLogin]);
+  }, [checkSessionExpired, isLoggedIn, didRetryLogin, isPrevLoggedIn, isSessionExpired, authorize]);
 
   return isSessionExpired;
 }

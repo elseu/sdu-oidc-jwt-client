@@ -30,10 +30,16 @@ export interface InitializedData<Claims extends ClaimsBase, User> {
   user: User | undefined;
 }
 
+interface AuthorizeConfig {
+  isRetrying?: boolean;
+}
+
 interface StoreMethods {
   resetStorage: (resetCsrfToken?: boolean) => void;
+  setRetryLogin: () => void;
+  unsetRetryLogin: () => void;
   logout: (params?: Params) => void;
-  authorize: (params?: Params) => void;
+  authorize: (params?: Params, config?: AuthorizeConfig) => void;
 
   setIsLoggedIn: (loggedIn: boolean) => void;
   setInitialized: (isInitialized: boolean) => void;
@@ -150,6 +156,7 @@ export type UseOidcJwtClientStore = {
   csrfToken: string | null;
   csrfTokenMethod: CsrfTokenMethod;
 
+  didRetryLogin: boolean;
   isLoggedIn: boolean;
   isInitialized: boolean;
 
@@ -170,7 +177,7 @@ export enum CsrfTokenMethod {
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
-export const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
+const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
 
 function createOidcJwtClientStore(
   options: OidcJwtClientOptions,
@@ -189,8 +196,8 @@ function createOidcJwtClientStore(
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
       csrfTokenMethod: options.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
 
+      didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-
       isInitialized: false,
 
       methods: {
@@ -247,8 +254,8 @@ function createOidcJwtClientStore(
           });
         },
 
-        authorize(params: Params = {}) {
-          const { defaultAuthConfig, baseUrl, methods: { resetStorage } } = get();
+        authorize(params: Params = {}, { isRetrying }: AuthorizeConfig = {}) {
+          const { defaultAuthConfig, baseUrl, methods: { resetStorage, setRetryLogin } } = get();
 
           const query = { ...defaultAuthConfig, ...params };
           if (!query.redirect_uri) {
@@ -257,6 +264,10 @@ function createOidcJwtClientStore(
 
           resetStorage();
 
+          if (isRetrying) {
+            setRetryLogin();
+          }
+
           window.location.href = queryString.stringifyUrl({ url: `${baseUrl}/authorize`, query });
         },
 
@@ -264,6 +275,14 @@ function createOidcJwtClientStore(
           Storage.unset(LOGGED_IN_TOKEN_STORAGE_KEY);
           Storage.unset(USER_INFO_TOKEN_STORAGE_KEY);
           if (resetCsrfToken) Storage.unset(CSRF_TOKEN_STORAGE_KEY);
+        },
+
+        setRetryLogin() {
+          Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
+        },
+
+        unsetRetryLogin() {
+          Storage.unset(RETRY_LOGIN_STORAGE_KEY);
         },
 
         logout(params: Params = {}) {
