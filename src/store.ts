@@ -30,112 +30,118 @@ export interface InitializedData<Claims extends ClaimsBase, User> {
   user: User | undefined;
 }
 
+interface AuthorizeConfig {
+  isRetrying?: boolean;
+}
+
 interface StoreMethods {
   resetStorage: (resetCsrfToken?: boolean) => void;
+  setRetryLogin: () => void;
+  unsetRetryLogin: () => void;
   logout: (params?: Params) => void;
-  authorize: (params?: Params) => void;
+  authorize: (params?: Params, config?: AuthorizeConfig) => void;
 
-  setIsLoggedIn(loggedIn: boolean): void;
-  setInitialized(isInitialized: boolean): void;
+  setIsLoggedIn: (loggedIn: boolean) => void;
+  setInitialized: (isInitialized: boolean) => void;
 
   /**
    * Receive session token and return user info
    * @param redirect If true (the default), redirect to the same page without the token.
    * @returns Promise<void>
    */
-  loadInitialData(redirect?: boolean): Promise<void>;
+  loadInitialData: (redirect?: boolean) => Promise<void>;
 
   /**
    * Try to remove token from url
    */
-  removeTokenFromUrl(): void;
+  removeTokenFromUrl: () => void;
 
   /**
    * Read the session token from the URL. Remove it from the URL if possible.
    * @returns Whether a redirect is taking place.
    */
-  getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean};
+  getCsrfToken: () => { csrfToken: string | null; hasTokenFromUrl: boolean};
 
   /**
    * Get the access token promise.
    * @returns Promise of access token info
    */
-  getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>>;
+  getAccessTokenPromise: <T extends ClaimsBase>(fetchedAt: number) => Promise<AccessTokenInfo<T>>;
 
   /**
    * Get a valid access token. If we already have one that's valid, we will not fetch a new one.
    * @returns Promise of access token info, or null.
    */
-  getAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T> | null>;
+  getAccessToken: <T extends ClaimsBase>() => Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Get user info success handle
    * @returns user info or null.
    */
-  getUserInfoSuccess<T>(data: T): T | null;
+  getUserInfoSuccess: <T>(data: T) => T | null;
 
   /**
    * Get user info. If we already have user info, we will not fetch new info.
    * @returns Promise of user info.
    */
-  getUserInfo<T>(): Promise<T | null>;
+  getUserInfo: <T>() => Promise<T | null>;
 
   /**
    * Set user info.
    * @returns void
    */
-  setUserInfo<T>(userInfo: T): void;
+  setUserInfo: <T>(userInfo: T) => void;
 
   /**
    * Gets user info cache promise
    * @returns A promise of the user info cache
    */
-  getUserInfoPromise<T>(): Promise<T | null>;
+  getUserInfoPromise: <T>() => Promise<T | null>;
 
   /**
    * Fetch fresh user info.
    * @returns A promise of the user info.
    */
-  fetchUserInfo<T>(): Promise<T | null>;
+  fetchUserInfo: <T>() => Promise<T | null>;
 
   /**
    * Monitor our access token and keep it up-to-date, so getAccessToken() is always fast.
    */
-  monitorAccessToken(): void;
+  monitorAccessToken: () => void;
 
   /**
    * Stop monitoring for new access token.
    */
-  stopMonitoringAccessToken(): void;
+  stopMonitoringAccessToken: () => void;
 
   /**
    * Validate the AccessTokenCache. If cache is valid return value otherwise clean cache
    * @returns null, AccessTokenInfo or Promise of AccessTokenInfo
    */
   // eslint-disable-next-line max-len
-  validateAccessTokenCache<T extends ClaimsBase>(cache: AccessTokenCache<T>, currentAccessTokenCache: Promise<AccessTokenCache<T>>): null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null>;
+  validateAccessTokenCache: <T extends ClaimsBase>(cache: AccessTokenCache<T>, currentAccessTokenCache: Promise<AccessTokenCache<T>>) => null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null>;
 
   /**
    * Set our session token.
    * @param {string} token
    */
-  setSessionToken(token: string): void;
+  setSessionToken: (token: string) => void;
 
   /**
    * Fetch a fresh access token.
    * @returns A promise of the access token info.
    */
-  fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>>;
+  fetchAccessToken: <T extends ClaimsBase>() => Promise<AccessTokenInfo<T>>;
 
-  fetchAccessTokenSuccess<T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number): AccessTokenCache<T>;
+  fetchAccessTokenSuccess: <T extends ClaimsBase>(value: AccessTokenInfo<T>, fetchedAt: number) => AccessTokenCache<T>;
 
-  fetchAccessTokenError(error: HttpError): AccessTokenCache<any>;
+  fetchAccessTokenError: (error: HttpError) => AccessTokenCache<any>;
 
   /**
    * Fetch wrapper
    */
-  fetchJsonWithAuth<T>(url: string): Promise<T>;
-  getFetchRequest(url: string): { config?: RequestInit; input: RequestInfo };
+  fetchJsonWithAuth: <T>(url: string) => Promise<T>;
+  getFetchRequest: (url: string) => { config?: RequestInit; input: RequestInfo };
 }
 
 export type UseOidcJwtClientStore = {
@@ -150,6 +156,7 @@ export type UseOidcJwtClientStore = {
   csrfToken: string | null;
   csrfTokenMethod: CsrfTokenMethod;
 
+  didRetryLogin: boolean;
   isLoggedIn: boolean;
   isInitialized: boolean;
 
@@ -163,13 +170,14 @@ export interface OidcJwtClientOptions {
 }
 
 export enum CsrfTokenMethod {
-  HEADER,
-  QUERYSTRING
+  HEADER = 0,
+  QUERYSTRING = 1
 }
 
 export const CSRF_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_token';
 const LOGGED_IN_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_logged_in';
 const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
+const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
 
 function createOidcJwtClientStore(
   options: OidcJwtClientOptions,
@@ -188,8 +196,8 @@ function createOidcJwtClientStore(
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
       csrfTokenMethod: options.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
 
+      didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-
       isInitialized: false,
 
       methods: {
@@ -238,7 +246,7 @@ function createOidcJwtClientStore(
 
           const { config, input } = getFetchRequest(url);
 
-          return fetch(input, config).then<T>(response => {
+          return fetch(input, config).then<T>((response) => {
             if (!response.ok) {
               throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
             }
@@ -246,8 +254,8 @@ function createOidcJwtClientStore(
           });
         },
 
-        authorize(params: Params = {}) {
-          const { defaultAuthConfig, baseUrl, methods: { resetStorage } } = get();
+        authorize(params: Params = {}, { isRetrying }: AuthorizeConfig = {}) {
+          const { defaultAuthConfig, baseUrl, methods: { resetStorage, setRetryLogin } } = get();
 
           const query = { ...defaultAuthConfig, ...params };
           if (!query.redirect_uri) {
@@ -256,6 +264,10 @@ function createOidcJwtClientStore(
 
           resetStorage();
 
+          if (isRetrying) {
+            setRetryLogin();
+          }
+
           window.location.href = queryString.stringifyUrl({ url: `${baseUrl}/authorize`, query });
         },
 
@@ -263,6 +275,14 @@ function createOidcJwtClientStore(
           Storage.unset(LOGGED_IN_TOKEN_STORAGE_KEY);
           Storage.unset(USER_INFO_TOKEN_STORAGE_KEY);
           if (resetCsrfToken) Storage.unset(CSRF_TOKEN_STORAGE_KEY);
+        },
+
+        setRetryLogin() {
+          Storage.set(RETRY_LOGIN_STORAGE_KEY, 1);
+        },
+
+        unsetRetryLogin() {
+          Storage.unset(RETRY_LOGIN_STORAGE_KEY);
         },
 
         logout(params: Params = {}) {
@@ -359,7 +379,7 @@ function createOidcJwtClientStore(
           }
 
           // const currentCache = accessTokenCache;
-          return accessTokenCache.then(cache => validateAccessTokenCache<T>(cache, accessTokenCache));
+          return accessTokenCache.then((cache) => validateAccessTokenCache<T>(cache, accessTokenCache));
         },
 
         setUserInfo<T>(userInfo: T) {
@@ -438,7 +458,7 @@ function createOidcJwtClientStore(
         getUserInfoPromise<T>(): Promise<T | null> {
           const { methods: { fetchJsonWithAuth } } = get();
 
-          const userInfoCache = fetchJsonWithAuth<T>('/userinfo').then(result => result, () => null);
+          const userInfoCache = fetchJsonWithAuth<T>('/userinfo').then((result) => result, () => null);
 
           set({ userInfoCache });
 
@@ -460,13 +480,13 @@ function createOidcJwtClientStore(
         getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>> {
           const { methods: { fetchJsonWithAuth, fetchAccessTokenSuccess, fetchAccessTokenError } } = get();
           const accessTokenCache = fetchJsonWithAuth<AccessTokenInfo<T>>('/token').then(
-            result => fetchAccessTokenSuccess<T>(result, fetchedAt),
+            (result) => fetchAccessTokenSuccess<T>(result, fetchedAt),
             fetchAccessTokenError,
           );
 
           set({ accessTokenCache });
 
-          return accessTokenCache.then(result => result.value);
+          return accessTokenCache.then((result) => result.value);
         },
 
         fetchAccessToken<T extends ClaimsBase>(): Promise<AccessTokenInfo<T>> {

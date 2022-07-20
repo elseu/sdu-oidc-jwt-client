@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { UseStore } from 'zustand';
+import { UseBoundStore } from 'zustand';
 
 import {
   createOidcJwtClientStore,
@@ -16,7 +16,7 @@ export interface OidcJwtProviderProps {
 }
 
 interface OidcJwtContextData {
-  useStore: UseStore<UseOidcJwtClientStore>;
+  useStore: UseBoundStore<UseOidcJwtClientStore>;
 }
 
 const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
@@ -52,8 +52,8 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     loadInitialData,
     monitorAccessToken,
     stopMonitoringAccessToken,
-  } = useStore(state => state.methods);
-  const isLoggedIn = useStore(state => state.isLoggedIn);
+  } = useStore((state) => state.methods);
+  const isLoggedIn = useStore((state) => state.isLoggedIn);
 
   useEffect(() => {
     loadInitialData();

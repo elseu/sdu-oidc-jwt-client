@@ -132,14 +132,14 @@ const Content = (props: ContentProps) => {
   return (
     <>
       <div>
-        {isLoggedIn && <button onClick={onClickLogout}>Log out</button>}
+        {isLoggedIn && <button type="button" onClick={onClickLogout}>Log out</button>}
         {isLoggedIn && (
-          <button onClick={onClickFetchToken}>Fetch token</button>
+          <button type="button" onClick={onClickFetchToken}>Fetch token</button>
         )}
         {testApiUrl && (
-          <button onClick={onClickCallApi}>Call API</button>
+          <button type="button" onClick={onClickCallApi}>Call API</button>
         )}
-        {!isLoggedIn && <button onClick={onClickLogin}>Log in</button>}
+        {!isLoggedIn && <button type="button" onClick={onClickLogin}>Log in</button>}
         {token && (
           <>
             <h2>Token</h2>
@@ -186,11 +186,11 @@ interface LargeTextAreaProps {
   value: string;
 }
 
-const LargeTextArea = (props: LargeTextAreaProps) => {
+const LargeTextArea = ({ value }: LargeTextAreaProps) => {
   return (
     <textarea
       style={{ height: '250px', width: '100%' }}
-      value={props.value}
+      value={value}
       onChange={(e) => console.log(e.target.value)}
     />
   );
