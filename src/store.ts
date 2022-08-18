@@ -1,5 +1,6 @@
 import queryString from 'query-string';
-import create, { UseBoundStore } from 'zustand';
+import create from 'zustand';
+import createContext from 'zustand/context';
 
 import { Storage } from './storage';
 import { HttpError, stripTokenFromUrl } from './utils';
@@ -182,7 +183,7 @@ const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
 function createOidcJwtClientStore(
   options: OidcJwtClientOptions,
   removeTokenFromUrlFunction: (url: string) => void,
-): UseBoundStore<UseOidcJwtClientStore> {
+) {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
       baseUrl: options.url.replace(/\/$/, ''),
@@ -529,4 +530,5 @@ function createOidcJwtClientStore(
   });
 }
 
-export { createOidcJwtClientStore };
+const { Provider, useStore } = createContext<UseOidcJwtClientStore>();
+export { createOidcJwtClientStore, Provider, useStore };

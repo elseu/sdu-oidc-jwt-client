@@ -1,10 +1,10 @@
-import React, { useContext, useEffect, useRef } from 'react';
-import { UseBoundStore } from 'zustand';
+import React, { useCallback, useEffect } from 'react';
 
 import {
   createOidcJwtClientStore,
   OidcJwtClientOptions,
-  UseOidcJwtClientStore,
+  Provider,
+  useStore,
 } from './store';
 import { removeTokenFromUrl } from './utils';
 
@@ -15,37 +15,11 @@ export interface OidcJwtProviderProps {
   removeTokenFromUrlFunction?: (url: string) => void;
 }
 
-interface OidcJwtContextData {
-  useStore: UseBoundStore<UseOidcJwtClientStore>;
-}
-
-const OidcJwtContext = React.createContext<OidcJwtContextData | null>(null);
-
-function useOidcJwtContext(): OidcJwtContextData {
-  const context = useContext(OidcJwtContext);
-  if (!context) {
-    throw new Error('Can only use useAuth...() inside OidcJwtProvider');
-  }
-  return context;
-}
-
-const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
-  const {
-    client: options,
-    shouldAttemptLogin = false,
-    shouldMonitorAccessTokens = true,
-    removeTokenFromUrlFunction = removeTokenFromUrl,
-    children,
-  } = props;
-
-  const contextRef = useRef<OidcJwtContextData>();
-  if (!contextRef.current) {
-    contextRef.current = {
-      useStore: createOidcJwtClientStore(options, removeTokenFromUrlFunction),
-    };
-  }
-
-  const { useStore } = contextRef.current;
+const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
+  shouldAttemptLogin = false,
+  shouldMonitorAccessTokens = true,
+  children,
+}) => {
   const {
     getCsrfToken,
     authorize,
@@ -78,7 +52,25 @@ const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
     return null;
   }
 
-  return <OidcJwtContext.Provider value={contextRef.current}>{children}</OidcJwtContext.Provider>;
+  return <>{children}</>;
 };
 
-export { OidcJwtProvider, useOidcJwtContext };
+const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
+  const {
+    client: options,
+    removeTokenFromUrlFunction = removeTokenFromUrl,
+    children,
+  } = props;
+
+  const createStore = useCallback(() => {
+    return createOidcJwtClientStore(options, removeTokenFromUrlFunction);
+  }, [options, removeTokenFromUrlFunction]);
+
+  return (
+    <Provider createStore={createStore}>
+      <OidcJwtInitializer {...props}>{children}</OidcJwtInitializer>
+    </Provider>
+  );
+};
+
+export { OidcJwtProvider };
