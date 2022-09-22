@@ -1,0 +1,10 @@
+name: Sync main to develop
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-branches:
+    uses: elseu/sdu-public-workflows/.github/workflows/sync-main-to-develop.yml@main
+    secrets: inherit
