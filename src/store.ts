@@ -186,8 +186,8 @@ function createOidcJwtClientStore(
 ) {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
-      baseUrl: options?.url.replace(/\/$/, '') || '',
-      defaultAuthConfig: options?.defaultAuthConfig || {},
+      baseUrl: options ? options.url.replace(/\/$/, '') : '',
+      defaultAuthConfig: options ? options.defaultAuthConfig || {} : {},
       removeTokenFromUrlFunction,
 
       monitorAccessTokenTimeout: null,
@@ -195,7 +195,7 @@ function createOidcJwtClientStore(
       userInfoCache: undefined,
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
-      csrfTokenMethod: options?.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
+      csrfTokenMethod: options ? options.csrfTokenMethod || CsrfTokenMethod.HEADER : CsrfTokenMethod.HEADER,
 
       didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
