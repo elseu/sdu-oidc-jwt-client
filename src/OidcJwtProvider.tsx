@@ -9,7 +9,7 @@ import {
 import { removeTokenFromUrl } from './utils';
 
 export interface OidcJwtProviderProps {
-  client?: OidcJwtClientOptions;
+  client: OidcJwtClientOptions | false;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
   removeTokenFromUrlFunction?: (url: string) => void;
