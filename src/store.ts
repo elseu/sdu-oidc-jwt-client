@@ -181,13 +181,13 @@ const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
 
 function createOidcJwtClientStore(
-  options: OidcJwtClientOptions | false,
+  client: OidcJwtClientOptions | false,
   removeTokenFromUrlFunction?: (url: string) => void,
 ) {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
-      baseUrl: options ? options.url.replace(/\/$/, '') : '',
-      defaultAuthConfig: options ? options.defaultAuthConfig || {} : {},
+      baseUrl: client ? client.url.replace(/\/$/, '') : '',
+      defaultAuthConfig: client ? client.defaultAuthConfig || {} : {},
       removeTokenFromUrlFunction,
 
       monitorAccessTokenTimeout: null,
@@ -195,11 +195,11 @@ function createOidcJwtClientStore(
       userInfoCache: undefined,
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
-      csrfTokenMethod: options ? options.csrfTokenMethod || CsrfTokenMethod.HEADER : CsrfTokenMethod.HEADER,
+      csrfTokenMethod: client ? client.csrfTokenMethod || CsrfTokenMethod.HEADER : CsrfTokenMethod.HEADER,
 
       didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-      isInitialized: !options,
+      isInitialized: !client,
 
       methods: {
         setInitialized(isInitialized: boolean) {
