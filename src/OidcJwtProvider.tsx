@@ -9,13 +9,14 @@ import {
 import { removeTokenFromUrl } from './utils';
 
 export interface OidcJwtProviderProps {
-  client: OidcJwtClientOptions;
+  client: OidcJwtClientOptions | false;
   shouldAttemptLogin?: boolean;
   shouldMonitorAccessTokens?: boolean;
   removeTokenFromUrlFunction?: (url: string) => void;
 }
 
 const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
+  client,
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
   children,
@@ -30,8 +31,9 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   const isLoggedIn = useStore((state) => state.isLoggedIn);
 
   useEffect(() => {
+    if (!client) return
     loadInitialData();
-  }, [shouldAttemptLogin, loadInitialData]);
+  }, [client, loadInitialData]);
 
   useEffect(() => {
     if (!isLoggedIn || !shouldMonitorAccessTokens) return;
@@ -48,7 +50,12 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
     authorize({ prompt: 'none' });
   }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
 
-  if (!getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn && typeof window !== 'undefined') {
+  const isInitializing = !getCsrfToken().csrfToken
+    && shouldAttemptLogin
+    && !isLoggedIn
+    && typeof window !== 'undefined';
+
+  if (isInitializing) {
     return null;
   }
 
@@ -57,14 +64,14 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
 
 const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
   const {
-    client: options,
+    client,
     removeTokenFromUrlFunction = removeTokenFromUrl,
     children,
   } = props;
 
   const createStore = useCallback(() => {
-    return createOidcJwtClientStore(options, removeTokenFromUrlFunction);
-  }, [options, removeTokenFromUrlFunction]);
+    return createOidcJwtClientStore(client, removeTokenFromUrlFunction);
+  }, [client, removeTokenFromUrlFunction]);
 
   return (
     <Provider createStore={createStore}>

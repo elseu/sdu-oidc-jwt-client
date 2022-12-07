@@ -1,5 +1,5 @@
 import queryString from 'query-string';
-import create from 'zustand';
+import create, { StoreApi } from 'zustand';
 import createContext from 'zustand/context';
 
 import { Storage } from './storage';
@@ -61,7 +61,7 @@ interface StoreMethods {
    * Read the session token from the URL. Remove it from the URL if possible.
    * @returns Whether a redirect is taking place.
    */
-  getCsrfToken: () => { csrfToken: string | null; hasTokenFromUrl: boolean};
+  getCsrfToken: () => { csrfToken: string | null; hasTokenFromUrl: boolean };
 
   /**
    * Get the access token promise.
@@ -148,7 +148,7 @@ interface StoreMethods {
 export type UseOidcJwtClientStore = {
   baseUrl: string;
   defaultAuthConfig: Params;
-  removeTokenFromUrlFunction: (url: string) => void;
+  removeTokenFromUrlFunction?: (url: string) => void;
 
   monitorAccessTokenTimeout: ReturnType<typeof setTimeout> | null;
   accessTokenCache?: Promise<AccessTokenCache<any>> | null;
@@ -181,13 +181,13 @@ const USER_INFO_TOKEN_STORAGE_KEY = 'oidc_jwt_provider_user_info';
 const RETRY_LOGIN_STORAGE_KEY = 'oidc_jwt_provider_retry_login';
 
 function createOidcJwtClientStore(
-  options: OidcJwtClientOptions,
-  removeTokenFromUrlFunction: (url: string) => void,
+  client: OidcJwtClientOptions | false,
+  removeTokenFromUrlFunction?: (url: string) => void,
 ) {
   return create<UseOidcJwtClientStore>((set, get) => {
     return ({
-      baseUrl: options.url.replace(/\/$/, ''),
-      defaultAuthConfig: options.defaultAuthConfig || {},
+      baseUrl: client ? client.url.replace(/\/$/, '') : '',
+      defaultAuthConfig: client ? client.defaultAuthConfig || {} : {},
       removeTokenFromUrlFunction,
 
       monitorAccessTokenTimeout: null,
@@ -195,11 +195,11 @@ function createOidcJwtClientStore(
       userInfoCache: undefined,
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
-      csrfTokenMethod: options.csrfTokenMethod ?? CsrfTokenMethod.HEADER,
+      csrfTokenMethod: client ? client.csrfTokenMethod || CsrfTokenMethod.HEADER : CsrfTokenMethod.HEADER,
 
       didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-      isInitialized: false,
+      isInitialized: !client,
 
       methods: {
         setInitialized(isInitialized: boolean) {
@@ -335,10 +335,10 @@ function createOidcJwtClientStore(
 
           if (typeof window === 'undefined') return;
 
-          removeTokenFromUrlFunction(window.location.href);
+          removeTokenFromUrlFunction?.(window.location.href);
         },
 
-        getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean} {
+        getCsrfToken(): { csrfToken: string | null; hasTokenFromUrl: boolean } {
           const { csrfToken, methods: { setSessionToken } } = get();
           const [, token] = (typeof window !== 'undefined' && window.location.search.match(/[?&]token=([^&]+)/)) || [];
 
@@ -379,7 +379,6 @@ function createOidcJwtClientStore(
             return fetchAccessToken<T>();
           }
 
-          // const currentCache = accessTokenCache;
           return accessTokenCache.then((cache) => validateAccessTokenCache<T>(cache, accessTokenCache));
         },
 
@@ -530,5 +529,5 @@ function createOidcJwtClientStore(
   });
 }
 
-const { Provider, useStore } = createContext<UseOidcJwtClientStore>();
+const { Provider, useStore } = createContext<StoreApi<UseOidcJwtClientStore>>();
 export { createOidcJwtClientStore, Provider, useStore };
