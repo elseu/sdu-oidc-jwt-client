@@ -4,7 +4,7 @@ import {
   createOidcJwtClientStore,
   OidcJwtClientOptions,
   Provider,
-  useStore,
+  useStore
 } from './store';
 import { removeTokenFromUrl } from './utils';
 
@@ -16,7 +16,6 @@ export interface OidcJwtProviderProps {
 }
 
 const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
-  client,
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
   children,
@@ -31,9 +30,8 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   const isLoggedIn = useStore((state) => state.isLoggedIn);
 
   useEffect(() => {
-    if (!client) return;
     loadInitialData();
-  }, [client, loadInitialData]);
+  }, [loadInitialData]);
 
   useEffect(() => {
     if (!isLoggedIn || !shouldMonitorAccessTokens) return;

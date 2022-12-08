@@ -301,6 +301,7 @@ function createOidcJwtClientStore(
 
         loadInitialData<Claims extends ClaimsBase, User>(): Promise<void> {
           const {
+            baseUrl,
             methods: {
               getCsrfToken,
               getAccessToken,
@@ -312,7 +313,7 @@ function createOidcJwtClientStore(
 
           const { csrfToken, hasTokenFromUrl } = getCsrfToken();
 
-          if (!csrfToken) {
+          if (!csrfToken || !baseUrl) {
             setInitialized(true);
             return Promise.resolve();
           }
