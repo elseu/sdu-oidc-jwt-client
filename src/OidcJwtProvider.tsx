@@ -31,7 +31,7 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   const isLoggedIn = useStore((state) => state.isLoggedIn);
 
   useEffect(() => {
-    if (!client) return
+    if (!client) return;
     loadInitialData();
   }, [client, loadInitialData]);
 
@@ -50,10 +50,10 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
     authorize({ prompt: 'none' });
   }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
 
-  const isInitializing = !getCsrfToken().csrfToken
-    && shouldAttemptLogin
-    && !isLoggedIn
-    && typeof window !== 'undefined';
+  const isInitializing = !getCsrfToken().csrfToken &&
+    shouldAttemptLogin &&
+    !isLoggedIn &&
+    typeof window !== 'undefined';
 
   if (isInitializing) {
     return null;
