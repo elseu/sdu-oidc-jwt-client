@@ -1,5 +1,5 @@
 import queryString from 'query-string';
-import create, { StoreApi } from 'zustand';
+import create from 'zustand';
 import createContext from 'zustand/context';
 
 import { Storage } from './storage';
@@ -530,5 +530,5 @@ function createOidcJwtClientStore(
   });
 }
 
-const { Provider, useStore } = createContext<StoreApi<UseOidcJwtClientStore>>();
+const { Provider, useStore } = createContext<UseOidcJwtClientStore>();
 export { createOidcJwtClientStore, Provider, useStore };
