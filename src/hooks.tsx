@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
-import { ClaimsBase, Params, useStore } from './store';
+import { useStore } from './store';
+import { ClaimsBase, Params } from './types';
 
 interface IUseAuthControls {
   logout: (params?: Params) => void;
@@ -10,65 +11,75 @@ interface IUseAuthControls {
 }
 
 function useAuthControls(): IUseAuthControls {
-  const authorize = useStore((state) => state.methods.authorize);
-  const logout = useStore((state) => state.methods.logout);
-  return { authorize, logout };
+  const authService = useStore(state => state.service);
+
+  return {
+    authorize: params => authService?.authorize(params),
+    logout: params => authService?.logout(params),
+  };
 }
 
 function useAuthInitialized(): boolean {
-  return useStore((state) => state.isInitialized);
+  return useStore(state => state.authState.isInitialized);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
-  const getUserInfo = useStore((state) => state.methods.getUserInfo);
+  const authService = useStore(state => state.service);
+  const setState = useStore(state => state.setState);
 
   const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !authService) {
       return Promise.resolve(null);
     }
-    return getUserInfo<T>();
+    return authService.getUserInfo<T>().then(userInfo => {
+      setState(authService.state);
+      return userInfo;
+    });
   }, [isLoggedIn]);
 }
 
 function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
-  const getAccessToken = useStore((state) => state.methods.getAccessToken);
+  const authService = useStore(state => state.service);
+  const setState = useStore(state => state.setState);
   const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !authService) {
       return Promise.resolve(null);
     }
-    return getAccessToken<T>().then((info) => info?.claims ?? null);
+    return authService.getAccessToken<T>().then(info => {
+      setState(authService.state);
+      return info?.claims ?? null;
+    });
   }, [isLoggedIn]);
 }
 
 function useAuthIsLoggedIn(): boolean {
-  return useStore((state) => state.isLoggedIn);
+  return useStore(state => state.authState.isLoggedIn);
 }
 
 function useAuthSessionExpired(): boolean {
-  const resetStorage = useStore((state) => state.methods.resetStorage);
-  const authorize = useStore((state) => state.methods.authorize);
-  const unsetRetryLogin = useStore((state) => state.methods.unsetRetryLogin);
-  const isLoggedIn = useStore((state) => state.isLoggedIn);
-  const didRetryLogin = useStore((state) => state.didRetryLogin);
+  const authService = useStore(state => state.service);
+
+  const isLoggedIn = useStore(state => state.authState.isLoggedIn);
+  const didRetryLogin = useStore(state => state.authState.didRetryLogin);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
   const checkSessionExpired = useCallback(() => {
     // Remove retry login state
-    unsetRetryLogin();
+    authService?.unsetRetryLogin();
 
     // Set session expired
     setSessionExpired(!isLoggedIn);
 
     // Clear storage when session is expired
     if (!isLoggedIn) {
-      resetStorage();
+      authService?.resetStorage();
     }
-  }, [isLoggedIn, resetStorage, unsetRetryLogin]);
+  }, [authService, isLoggedIn]);
 
   useEffect(() => {
     /**
@@ -90,18 +101,30 @@ function useAuthSessionExpired(): boolean {
      * and then retry the login silently
      */
     if (!isSessionExpired && !didRetryLogin && isFirstSessionExpired) {
-      authorize({ prompt: 'none' }, { isRetrying: true });
+      authService?.authorize({ prompt: 'none' }, { isRetrying: true });
     }
-  }, [checkSessionExpired, isLoggedIn, didRetryLogin, isPrevLoggedIn, isSessionExpired, authorize]);
+  }, [
+    checkSessionExpired,
+    isLoggedIn,
+    didRetryLogin,
+    isPrevLoggedIn,
+    isSessionExpired,
+    authService,
+  ]);
 
   return isSessionExpired;
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
-  const getAccessToken = useStore((state) => state.methods.getAccessToken);
+  const authService = useStore(state => state.service);
+
   return useCallback(() => {
-    return getAccessToken().then((result) => result?.token ?? null);
-  }, [getAccessToken]);
+    if (!authService) {
+      return Promise.resolve(null);
+    }
+
+    return authService.getAccessToken().then(result => result?.token ?? null);
+  }, [authService]);
 }
 
 export {
