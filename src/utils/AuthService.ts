@@ -301,13 +301,13 @@ export class AuthService {
     return response;
   }
 
-  monitorAccessToken(callback: (state: AuthState) => void): void {
+  monitorAccessToken(callback: () => void): void {
     // so, accessTokenCache, holds the OLD promise at this point (if first is false)
     // at the end of the token life-cycle.
     const updateToken = (first = false) => {
       if ((first && !this.cache.accessTokenCache) || !first) {
         // But... fetchAccessToken updates the accessTokenCache immediately with a new promise
-        this.fetchAccessToken().then(() => callback(this.state));
+        this.fetchAccessToken().then(() => callback());
       }
       // let's get the new accessTokenCache promise here
       // and when that promise is solved, we can schedule a timer using the accessTokenCacheHandler,

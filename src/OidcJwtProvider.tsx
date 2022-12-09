@@ -20,7 +20,7 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   useEffect(() => {
     if (!isLoggedIn || !shouldMonitorAccessTokens) return;
 
-    authService?.monitorAccessToken(state => setState(state));
+    authService?.monitorAccessToken(() => setState(authService.state));
 
     return () => authService?.stopMonitoringAccessToken();
   }, [isLoggedIn, authService, shouldMonitorAccessTokens, setState]);
