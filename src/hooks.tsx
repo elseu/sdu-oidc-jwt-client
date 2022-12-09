@@ -117,14 +117,18 @@ function useAuthSessionExpired(): boolean {
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
   const authService = useStore(state => state.service);
+  const setState = useStore(state => state.setState);
 
   return useCallback(() => {
     if (!authService) {
       return Promise.resolve(null);
     }
 
-    return authService.getAccessToken().then(result => result?.token ?? null);
-  }, [authService]);
+    return authService.getAccessToken().then(result => {
+      setState(authService.state);
+      return result?.token ?? null;
+    });
+  }, [authService, setState]);
 }
 
 export {
