@@ -1,54 +1,41 @@
 import React, { useCallback, useEffect } from 'react';
 
-import {
-  createOidcJwtClientStore,
-  OidcJwtClientOptions,
-  Provider,
-  useStore
-} from './store';
+import { createOidcJwtClientStore, Provider, useStore } from './store';
+import { OidcJwtProviderProps } from './types';
 import { removeTokenFromUrl } from './utils';
-
-export interface OidcJwtProviderProps {
-  client: OidcJwtClientOptions | false;
-  shouldAttemptLogin?: boolean;
-  shouldMonitorAccessTokens?: boolean;
-  removeTokenFromUrlFunction?: (url: string) => void;
-}
 
 const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
   children,
 }) => {
-  const {
-    getCsrfToken,
-    authorize,
-    loadInitialData,
-    monitorAccessToken,
-    stopMonitoringAccessToken,
-  } = useStore((state) => state.methods);
-  const isLoggedIn = useStore((state) => state.isLoggedIn);
+  const authService = useStore(state => state.service);
+  const isLoggedIn = useStore(state => state.authState.isLoggedIn);
+  const setState = useStore(state => state.setState);
 
   useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+    authService?.loadInitialData().then(() => setState(authService.state));
+  }, [authService, setState]);
 
   useEffect(() => {
     if (!isLoggedIn || !shouldMonitorAccessTokens) return;
 
-    monitorAccessToken();
+    authService?.monitorAccessToken(() => setState(authService.state));
 
-    return () => stopMonitoringAccessToken();
-  }, [isLoggedIn, monitorAccessToken, shouldMonitorAccessTokens, stopMonitoringAccessToken]);
+    return () => authService?.stopMonitoringAccessToken();
+  }, [isLoggedIn, authService, shouldMonitorAccessTokens, setState]);
 
   useEffect(() => {
-    const { csrfToken } = getCsrfToken();
+    if (!authService) return;
+
+    const { csrfToken } = authService.getCsrfToken();
     if (typeof window === 'undefined' || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
-    authorize({ prompt: 'none' });
-  }, [authorize, getCsrfToken, isLoggedIn, shouldAttemptLogin]);
+    authService.authorize({ prompt: 'none' });
+  }, [authService, isLoggedIn, shouldAttemptLogin]);
 
-  const isInitializing = !getCsrfToken().csrfToken &&
+  const isInitializing =
+    !authService?.getCsrfToken().csrfToken &&
     shouldAttemptLogin &&
     !isLoggedIn &&
     typeof window !== 'undefined';
@@ -60,12 +47,8 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   return <>{children}</>;
 };
 
-const OidcJwtProvider: React.FC<OidcJwtProviderProps> = (props) => {
-  const {
-    client,
-    removeTokenFromUrlFunction = removeTokenFromUrl,
-    children,
-  } = props;
+const OidcJwtProvider: React.FC<OidcJwtProviderProps> = props => {
+  const { client, removeTokenFromUrlFunction = removeTokenFromUrl, children } = props;
 
   const createStore = useCallback(() => {
     return createOidcJwtClientStore(client, removeTokenFromUrlFunction);
