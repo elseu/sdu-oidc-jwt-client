@@ -263,7 +263,7 @@ export class AuthService {
   getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>> {
     const accessTokenCache = this.fetchJsonWithAuth<AccessTokenInfo<T>>('/token').then(
       result => this.fetchAccessTokenSuccess<T>(result, fetchedAt),
-      this.fetchAccessTokenError
+      err => this.fetchAccessTokenError(err)
     );
 
     this.cache.accessTokenCache = accessTokenCache;
