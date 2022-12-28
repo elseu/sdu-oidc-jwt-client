@@ -46,8 +46,6 @@ export class AuthService {
     if (this.client.csrfTokenMethod) {
       this.csrfTokenMethod = this.client.csrfTokenMethod;
     }
-
-    console.log(this);
   }
 
   setInitialized(isInitialized: boolean) {
@@ -118,15 +116,11 @@ export class AuthService {
   }
 
   logout(params: Params = {}) {
-    console.log(params);
-
     const post_logout_redirect_uri = params.post_logout_redirect_uri || window.location.href;
     const query = {
       ...params,
       post_logout_redirect_uri,
     };
-
-    console.log(this);
 
     this.resetStorage();
     window.location.href = queryString.stringifyUrl({ url: `${this.client.url}/logout`, query });
