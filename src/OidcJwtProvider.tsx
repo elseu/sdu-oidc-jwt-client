@@ -4,7 +4,7 @@ import { createOidcJwtClientStore, Provider, useStore } from './store';
 import { OidcJwtProviderProps } from './types';
 import { removeTokenFromUrl } from './utils';
 
-const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
+const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = ({
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
   children,
@@ -47,7 +47,7 @@ const OidcJwtInitializer: React.FC<OidcJwtProviderProps> = ({
   return <>{children}</>;
 };
 
-const OidcJwtProvider: React.FC<OidcJwtProviderProps> = props => {
+const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = props => {
   const { client, removeTokenFromUrlFunction = removeTokenFromUrl, children } = props;
 
   const createStore = useCallback(() => {

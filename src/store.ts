@@ -1,4 +1,4 @@
-import create, { StoreApi } from 'zustand';
+import { create, StoreApi } from 'zustand';
 import createContext from 'zustand/context';
 
 import {
@@ -26,10 +26,10 @@ function createOidcJwtClientStore(
 
     const service = client
       ? new AuthService({
-          client,
-          removeTokenFromUrlFunction,
-          state: initialState,
-        })
+        client,
+        removeTokenFromUrlFunction,
+        state: initialState,
+      })
       : null;
 
     return {
