@@ -1,7 +1,6 @@
 import { Meta, Story } from '@storybook/react';
 import React, { useState } from 'react';
 
-import { CsrfTokenMethod } from '../constants';
 import {
   useAuthAccessClaims,
   useAuthAccessToken,
@@ -12,6 +11,7 @@ import {
   useAuthUserInfo,
 } from '../hooks';
 import { OidcJwtProvider } from '../OidcJwtProvider';
+import { CsrfTokenMethod } from '../store';
 
 interface TemplateProps {
   url: string;
