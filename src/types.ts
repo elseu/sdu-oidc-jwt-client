@@ -55,7 +55,7 @@ export interface AuthServiceOptions {
   removeTokenFromUrlFunction?: RemoveTokenFromUrlFunction;
 }
 
-export type UseOidcJwtClientStore = {
+export type OidcJwtClientStore = {
   service: AuthService | null;
   authState: AuthState;
   setState: (state: AuthState) => void;
