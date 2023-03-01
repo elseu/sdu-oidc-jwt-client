@@ -199,8 +199,8 @@ const LargeTextArea = ({ value }: LargeTextAreaProps) => {
 export const Login = Template.bind({});
 
 Login.args = {
-  url: 'https://api-auth.acc.titan.awssdu.nl',
-  testApiUrl: 'https://api-auth-test.acc.titan.awssdu.nl',
+  url: 'https://api-auth.ota.titan2.awssdu.nl',
+  testApiUrl: 'https://api-auth-test.ota.titan2.awssdu.nl',
   shouldAttemptLogin: true,
   shouldMonitorAccessTokens: true,
 };

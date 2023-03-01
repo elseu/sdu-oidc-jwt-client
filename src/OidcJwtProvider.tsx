@@ -1,17 +1,37 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
+import { StoreApi, UseBoundStore, useStore } from 'zustand';
 
-import { createOidcJwtClientStore, Provider, useStore } from './store';
-import { OidcJwtProviderProps } from './types';
+import { createOidcJwtClientStore } from './store';
+import { OidcJwtClientStore, OidcJwtProviderProps } from './types';
 import { removeTokenFromUrl } from './utils';
+
+const OidcJwtContext = createContext<UseBoundStore<StoreApi<OidcJwtClientStore>> | undefined>(undefined);
+
+/**
+ * @see https://github.com/pmndrs/zustand/blob/main/docs/guides/typescript.md#bounded-usestore-hook-for-vanilla-stores
+ */
+function useOidcJwtStore(): OidcJwtClientStore;
+function useOidcJwtStore<T>(
+  selector: (state: OidcJwtClientStore) => T,
+  equals?: (a: T, b: T) => boolean,
+): T;
+function useOidcJwtStore<T>(selector?: (state: OidcJwtClientStore) => T, equals?: (a: T, b: T) => boolean) {
+  const context = useContext(OidcJwtContext);
+  if (context === undefined) {
+    throw new Error('useOidcJwtStore must be used within a OidcJwtProvider');
+  }
+
+  return useStore(context, selector!, equals);
+}
 
 const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = ({
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
   children,
 }) => {
-  const authService = useStore(state => state.service);
-  const isLoggedIn = useStore(state => state.authState.isLoggedIn);
-  const setState = useStore(state => state.setState);
+  const authService = useOidcJwtStore(state => state.service);
+  const isLoggedIn = useOidcJwtStore(state => state.authState.isLoggedIn);
+  const setState = useOidcJwtStore(state => state.setState);
 
   useEffect(() => {
     authService?.loadInitialData().then(() => setState(authService.state));
@@ -49,16 +69,13 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
 
 const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = props => {
   const { client, removeTokenFromUrlFunction = removeTokenFromUrl, children } = props;
-
-  const createStore = useCallback(() => {
-    return createOidcJwtClientStore(client, removeTokenFromUrlFunction);
-  }, [client, removeTokenFromUrlFunction]);
+  const store = useRef(createOidcJwtClientStore(client, removeTokenFromUrlFunction)).current;
 
   return (
-    <Provider createStore={createStore}>
+    <OidcJwtContext.Provider value={store}>
       <OidcJwtInitializer {...props}>{children}</OidcJwtInitializer>
-    </Provider>
+    </OidcJwtContext.Provider>
   );
 };
 
-export { OidcJwtProvider };
+export { OidcJwtProvider, useOidcJwtStore };

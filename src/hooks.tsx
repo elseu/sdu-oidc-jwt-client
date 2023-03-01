@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAsync, usePrevious } from 'react-use';
 import { AsyncState } from 'react-use/lib/useAsync';
 
-import { useStore } from './store';
+import { useOidcJwtStore } from './OidcJwtProvider';
 import { ClaimsBase, Params } from './types';
 
 interface IUseAuthControls {
@@ -11,7 +11,7 @@ interface IUseAuthControls {
 }
 
 function useAuthControls(): IUseAuthControls {
-  const authService = useStore(state => state.service);
+  const authService = useOidcJwtStore(state => state.service);
 
   return {
     authorize: params => authService?.authorize(params),
@@ -20,12 +20,12 @@ function useAuthControls(): IUseAuthControls {
 }
 
 function useAuthInitialized(): boolean {
-  return useStore(state => state.authState.isInitialized);
+  return useOidcJwtStore(state => state.authState.isInitialized);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
-  const authService = useStore(state => state.service);
-  const setState = useStore(state => state.setState);
+  const authService = useOidcJwtStore(state => state.service);
+  const setState = useOidcJwtStore(state => state.setState);
 
   const isLoggedIn = useAuthIsLoggedIn();
 
@@ -41,8 +41,8 @@ function useAuthUserInfo<T>(): AsyncState<T | null> {
 }
 
 function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
-  const authService = useStore(state => state.service);
-  const setState = useStore(state => state.setState);
+  const authService = useOidcJwtStore(state => state.service);
+  const setState = useOidcJwtStore(state => state.setState);
   const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
@@ -57,14 +57,14 @@ function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
 }
 
 function useAuthIsLoggedIn(): boolean {
-  return useStore(state => state.authState.isLoggedIn);
+  return useOidcJwtStore(state => state.authState.isLoggedIn);
 }
 
 function useAuthSessionExpired(): boolean {
-  const authService = useStore(state => state.service);
+  const authService = useOidcJwtStore(state => state.service);
 
-  const isLoggedIn = useStore(state => state.authState.isLoggedIn);
-  const didRetryLogin = useStore(state => state.authState.didRetryLogin);
+  const isLoggedIn = useOidcJwtStore(state => state.authState.isLoggedIn);
+  const didRetryLogin = useOidcJwtStore(state => state.authState.didRetryLogin);
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
@@ -116,8 +116,8 @@ function useAuthSessionExpired(): boolean {
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
-  const authService = useStore(state => state.service);
-  const setState = useStore(state => state.setState);
+  const authService = useOidcJwtStore(state => state.service);
+  const setState = useOidcJwtStore(state => state.setState);
 
   return useCallback(() => {
     if (!authService) {
