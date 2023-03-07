@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useIsomorphicLayoutEffect } from 'react-use';
 import { StoreApi, UseBoundStore, useStore } from 'zustand';
 
 import { createOidcJwtClientStore } from './store';
@@ -32,6 +33,7 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
   const authService = useOidcJwtStore(state => state.service);
   const isLoggedIn = useOidcJwtStore(state => state.authState.isLoggedIn);
   const setState = useOidcJwtStore(state => state.setState);
+  const [isInitializing, setIsInitializing] = useState(false)
 
   useEffect(() => {
     authService?.loadInitialData().then(() => setState(authService.state));
@@ -54,11 +56,15 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
     authService.authorize({ prompt: 'none' });
   }, [authService, isLoggedIn, shouldAttemptLogin]);
 
-  const isInitializing =
-    !authService?.getCsrfToken().csrfToken &&
-    shouldAttemptLogin &&
-    !isLoggedIn &&
-    typeof window !== 'undefined';
+  useIsomorphicLayoutEffect(() => {
+    const isInitializing =
+      !authService?.getCsrfToken().csrfToken &&
+      shouldAttemptLogin &&
+      !isLoggedIn &&
+      typeof window !== 'undefined';
+
+    setIsInitializing(isInitializing);
+  }, [authService, isLoggedIn, shouldAttemptLogin]);
 
   if (isInitializing) {
     return null;
