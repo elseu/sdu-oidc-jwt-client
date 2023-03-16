@@ -92,7 +92,7 @@ export class AuthService {
   fetchJsonWithAuth<T>(url: string): Promise<T> {
     const { config, input } = this.getFetchRequest(url);
 
-    return fetch(input, config).then<T>(response => {
+    return fetch(input, config).then<T>((response) => {
       if (!response.ok) {
         throw new HttpError({ statusCode: response.status, message: 'Error fetching JSON' });
       }
@@ -181,7 +181,7 @@ export class AuthService {
 
   validateAccessTokenCache<T extends ClaimsBase>(
     cache: AccessTokenCache<T>,
-    currentAccessTokenCache: Promise<AccessTokenCache<T>>
+    currentAccessTokenCache: Promise<AccessTokenCache<T>>,
   ): null | AccessTokenInfo<T> | Promise<AccessTokenInfo<T> | null> {
     const now = new Date().getTime();
 
@@ -207,7 +207,7 @@ export class AuthService {
     }
 
     return this.cache.accessTokenCache.then((cache: any) =>
-      this.validateAccessTokenCache<T>(cache, this.cache.accessTokenCache)
+      this.validateAccessTokenCache<T>(cache, this.cache.accessTokenCache),
     );
   }
 
@@ -235,8 +235,8 @@ export class AuthService {
 
   getUserInfoPromise<T>(): Promise<T | null> {
     const userInfoCache = this.fetchJsonWithAuth<T>('/userinfo').then(
-      result => result,
-      () => null
+      (result) => result,
+      () => null,
     );
 
     this.cache.userInfoCache = userInfoCache;
@@ -256,8 +256,8 @@ export class AuthService {
 
   getAccessTokenPromise<T extends ClaimsBase>(fetchedAt: number): Promise<AccessTokenInfo<T>> {
     const accessTokenCache = this.fetchJsonWithAuth<AccessTokenInfo<T>>('/token').then(
-      result => this.fetchAccessTokenSuccess<T>(result, fetchedAt),
-      err => this.fetchAccessTokenError(err)
+      (result) => this.fetchAccessTokenSuccess<T>(result, fetchedAt),
+      (err) => this.fetchAccessTokenError(err),
     );
 
     this.cache.accessTokenCache = accessTokenCache;

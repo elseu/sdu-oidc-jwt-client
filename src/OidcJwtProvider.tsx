@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { useIsomorphicLayoutEffect } from 'react-use';
 import { StoreApi, UseBoundStore, useStore } from 'zustand';
 
 import { createOidcJwtClientStore } from './store';
 import { OidcJwtClientStore, OidcJwtProviderProps } from './types';
 import { removeTokenFromUrl } from './utils';
 
-const OidcJwtContext = createContext<UseBoundStore<StoreApi<OidcJwtClientStore>> | undefined>(undefined);
+const OidcJwtContext = createContext<UseBoundStore<StoreApi<OidcJwtClientStore>> | undefined>(
+  undefined,
+);
 
 /**
  * @see https://github.com/pmndrs/zustand/blob/main/docs/guides/typescript.md#bounded-usestore-hook-for-vanilla-stores
@@ -16,7 +17,10 @@ function useOidcJwtStore<T>(
   selector: (state: OidcJwtClientStore) => T,
   equals?: (a: T, b: T) => boolean,
 ): T;
-function useOidcJwtStore<T>(selector?: (state: OidcJwtClientStore) => T, equals?: (a: T, b: T) => boolean) {
+function useOidcJwtStore<T>(
+  selector?: (state: OidcJwtClientStore) => T,
+  equals?: (a: T, b: T) => boolean,
+) {
   const context = useContext(OidcJwtContext);
   if (context === undefined) {
     throw new Error('useOidcJwtStore must be used within a OidcJwtProvider');
@@ -30,10 +34,10 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
   shouldMonitorAccessTokens = true,
   children,
 }) => {
-  const authService = useOidcJwtStore(state => state.service);
-  const isLoggedIn = useOidcJwtStore(state => state.authState.isLoggedIn);
-  const setState = useOidcJwtStore(state => state.setState);
-  const [isInitializing, setIsInitializing] = useState(false)
+  const authService = useOidcJwtStore((state) => state.service);
+  const isLoggedIn = useOidcJwtStore((state) => state.authState.isLoggedIn);
+  const setState = useOidcJwtStore((state) => state.setState);
+  const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
     authService?.loadInitialData().then(() => setState(authService.state));
@@ -56,7 +60,7 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
     authService.authorize({ prompt: 'none' });
   }, [authService, isLoggedIn, shouldAttemptLogin]);
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const isInitializing =
       !authService?.getCsrfToken().csrfToken &&
       shouldAttemptLogin &&
@@ -73,7 +77,7 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
   return <>{children}</>;
 };
 
-const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = props => {
+const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = (props) => {
   const { client, removeTokenFromUrlFunction = removeTokenFromUrl, children } = props;
   const store = useRef(createOidcJwtClientStore(client, removeTokenFromUrlFunction)).current;
 
