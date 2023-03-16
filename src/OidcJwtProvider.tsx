@@ -62,10 +62,7 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
 
   useEffect(() => {
     const isInitializing =
-      !authService?.getCsrfToken().csrfToken &&
-      shouldAttemptLogin &&
-      !isLoggedIn &&
-      typeof window !== 'undefined';
+      !authService?.getCsrfToken().csrfToken && shouldAttemptLogin && !isLoggedIn;
 
     setIsInitializing(isInitializing);
   }, [authService, isLoggedIn, shouldAttemptLogin]);
