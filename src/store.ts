@@ -12,7 +12,7 @@ function createOidcJwtClientStore(
       userInfo: undefined,
       csrfToken: null,
       isLoggedIn: false,
-      isInitialized: !client,
+      isInitialized: false,
       didRetryLogin: false,
     };
 
