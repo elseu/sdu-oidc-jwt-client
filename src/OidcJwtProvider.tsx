@@ -100,10 +100,13 @@ const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> =
       didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
     };
 
-    setMounted(true);
+    const service = store.getState().service;
 
+    service?.setState(initialState);
     store.setState({ authState: initialState });
-  }, [client, store]);
+
+    setMounted(true);
+  }, [store]);
 
   return (
     <OidcJwtContext.Provider value={store}>

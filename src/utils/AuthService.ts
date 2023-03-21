@@ -52,6 +52,10 @@ export class AuthService {
     this.state.isInitialized = isInitialized;
   }
 
+  setState(state: AuthState) {
+    this.state = state;
+  }
+
   setIsLoggedIn(isLoggedIn: boolean) {
     Storage.set(LOGGED_IN_TOKEN_STORAGE_KEY, isLoggedIn);
 
