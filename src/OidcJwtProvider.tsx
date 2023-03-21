@@ -36,9 +36,12 @@ function useOidcJwtStore<T>(
   return useStore(context, selector!, equals);
 }
 
-const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = ({
+const OidcJwtInitializer: React.FC<
+  React.PropsWithChildren<OidcJwtProviderProps & { isMounted: boolean }>
+> = ({
   shouldAttemptLogin = false,
   shouldMonitorAccessTokens = true,
+  isMounted = false,
   children,
 }) => {
   const authService = useOidcJwtStore((state) => state.service);
@@ -47,25 +50,27 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
   const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
+    if (!isMounted) return;
+
     authService?.loadInitialData().then(() => setState(authService.state));
-  }, [authService, setState]);
+  }, [authService, isMounted, setState]);
 
   useEffect(() => {
-    if (!isLoggedIn || !shouldMonitorAccessTokens) return;
+    if (!isLoggedIn || !shouldMonitorAccessTokens || !isMounted) return;
 
     authService?.monitorAccessToken(() => setState(authService.state));
 
     return () => authService?.stopMonitoringAccessToken();
-  }, [isLoggedIn, authService, shouldMonitorAccessTokens, setState]);
+  }, [isLoggedIn, authService, shouldMonitorAccessTokens, setState, isMounted]);
 
   useEffect(() => {
-    if (!authService) return;
+    if (!authService || !isMounted) return;
 
     const { csrfToken } = authService.getCsrfToken();
     if (typeof window === 'undefined' || isLoggedIn || !shouldAttemptLogin || !!csrfToken) return;
 
     authService.authorize({ prompt: 'none' });
-  }, [authService, isLoggedIn, shouldAttemptLogin]);
+  }, [authService, isLoggedIn, isMounted, shouldAttemptLogin]);
 
   useEffect(() => {
     const isInitializing =
@@ -83,6 +88,7 @@ const OidcJwtInitializer: React.FC<React.PropsWithChildren<OidcJwtProviderProps>
 
 const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> = (props) => {
   const { client, removeTokenFromUrlFunction = removeTokenFromUrl, children } = props;
+  const [isMounted, setMounted] = useState(false);
   const store = useRef(createOidcJwtClientStore(client, removeTokenFromUrlFunction)).current;
 
   useEffect(() => {
@@ -90,16 +96,20 @@ const OidcJwtProvider: React.FC<React.PropsWithChildren<OidcJwtProviderProps>> =
       userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
       csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
       isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-      isInitialized: !client,
+      isInitialized: false,
       didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
     };
+
+    setMounted(true);
 
     store.setState({ authState: initialState });
   }, [client, store]);
 
   return (
     <OidcJwtContext.Provider value={store}>
-      <OidcJwtInitializer {...props}>{children}</OidcJwtInitializer>
+      <OidcJwtInitializer isMounted={isMounted} {...props}>
+        {children}
+      </OidcJwtInitializer>
     </OidcJwtContext.Provider>
   );
 };
