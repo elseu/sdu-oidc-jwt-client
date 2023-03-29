@@ -11,21 +11,21 @@ interface IUseAuthControls {
 }
 
 function useAuthControls(): IUseAuthControls {
-  const authService = useOidcJwtStore(state => state.service);
+  const authService = useOidcJwtStore((state) => state.service);
 
   return {
-    authorize: params => authService?.authorize(params),
-    logout: params => authService?.logout(params),
+    authorize: (params) => authService?.authorize(params),
+    logout: (params) => authService?.logout(params),
   };
 }
 
 function useAuthInitialized(): boolean {
-  return useOidcJwtStore(state => state.authState.isInitialized);
+  return useOidcJwtStore((state) => state.authState.isInitialized);
 }
 
 function useAuthUserInfo<T>(): AsyncState<T | null> {
-  const authService = useOidcJwtStore(state => state.service);
-  const setState = useOidcJwtStore(state => state.setState);
+  const authService = useOidcJwtStore((state) => state.service);
+  const setState = useOidcJwtStore((state) => state.setState);
 
   const isLoggedIn = useAuthIsLoggedIn();
 
@@ -33,7 +33,7 @@ function useAuthUserInfo<T>(): AsyncState<T | null> {
     if (!isLoggedIn || !authService) {
       return Promise.resolve(null);
     }
-    return authService.getUserInfo<T>().then(userInfo => {
+    return authService.getUserInfo<T>().then((userInfo) => {
       setState(authService.state);
       return userInfo;
     });
@@ -41,15 +41,15 @@ function useAuthUserInfo<T>(): AsyncState<T | null> {
 }
 
 function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
-  const authService = useOidcJwtStore(state => state.service);
-  const setState = useOidcJwtStore(state => state.setState);
+  const authService = useOidcJwtStore((state) => state.service);
+  const setState = useOidcJwtStore((state) => state.setState);
   const isLoggedIn = useAuthIsLoggedIn();
 
   return useAsync<() => Promise<T | null>>(async () => {
     if (!isLoggedIn || !authService) {
       return Promise.resolve(null);
     }
-    return authService.getAccessToken<T>().then(info => {
+    return authService.getAccessToken<T>().then((info) => {
       setState(authService.state);
       return info?.claims ?? null;
     });
@@ -57,14 +57,16 @@ function useAuthAccessClaims<T extends ClaimsBase>(): AsyncState<T | null> {
 }
 
 function useAuthIsLoggedIn(): boolean {
-  return useOidcJwtStore(state => state.authState.isLoggedIn);
+  return useOidcJwtStore((state) => state.authState.isLoggedIn);
 }
 
 function useAuthSessionExpired(): boolean {
-  const authService = useOidcJwtStore(state => state.service);
+  const authService = useOidcJwtStore((state) => state.service);
 
-  const isLoggedIn = useOidcJwtStore(state => state.authState.isLoggedIn);
-  const didRetryLogin = useOidcJwtStore(state => state.authState.didRetryLogin);
+  const isLoggedIn = useOidcJwtStore((state) => state.authState.isLoggedIn);
+  const didRetryLogin = useOidcJwtStore((state) => state.authState.didRetryLogin);
+  const isInitialized = useOidcJwtStore((state) => state.authState.isInitialized);
+
   const isPrevLoggedIn = usePrevious<boolean>(isLoggedIn);
   const [isSessionExpired, setSessionExpired] = useState<boolean>(false);
 
@@ -87,10 +89,10 @@ function useAuthSessionExpired(): boolean {
      * and they are still not logged in with Ping: sesssion expired
      * and remove the retry item from localStorage
      */
-    if (didRetryLogin) {
+    if (didRetryLogin && isInitialized) {
       checkSessionExpired();
     }
-  }, [checkSessionExpired, didRetryLogin]);
+  }, [checkSessionExpired, didRetryLogin, isInitialized]);
 
   useEffect(() => {
     const isFirstSessionExpired = Boolean(!isLoggedIn && isPrevLoggedIn);
@@ -100,7 +102,7 @@ function useAuthSessionExpired(): boolean {
      * store in localStorage that we are going to retry the login
      * and then retry the login silently
      */
-    if (!isSessionExpired && !didRetryLogin && isFirstSessionExpired) {
+    if (!isSessionExpired && !didRetryLogin && isFirstSessionExpired && isInitialized) {
       authService?.authorize({ prompt: 'none' }, { isRetrying: true });
     }
   }, [
@@ -110,21 +112,22 @@ function useAuthSessionExpired(): boolean {
     isPrevLoggedIn,
     isSessionExpired,
     authService,
+    isInitialized,
   ]);
 
   return isSessionExpired;
 }
 
 function useAuthAccessToken(): { (): Promise<string | null> } {
-  const authService = useOidcJwtStore(state => state.service);
-  const setState = useOidcJwtStore(state => state.setState);
+  const authService = useOidcJwtStore((state) => state.service);
+  const setState = useOidcJwtStore((state) => state.setState);
 
   return useCallback(() => {
     if (!authService) {
       return Promise.resolve(null);
     }
 
-    return authService.getAccessToken().then(result => {
+    return authService.getAccessToken().then((result) => {
       setState(authService.state);
       return result?.token ?? null;
     });

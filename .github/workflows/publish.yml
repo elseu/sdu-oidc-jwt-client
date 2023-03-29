@@ -25,9 +25,9 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - uses: jgierer12/npm-auth-gpr@v1
         if: steps.cache.outputs.cache-hit != 'true'
         with:
@@ -49,17 +49,17 @@ jobs:
 
   deploy_npm:
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release'
-    needs: [ build ]
+    needs: [build]
     env:
       BRANCH: ${{ github.ref }}
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@master
       - name: Set up Node.js
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - uses: actions/download-artifact@master
         with:
           name: dist

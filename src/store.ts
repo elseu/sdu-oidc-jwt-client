@@ -1,40 +1,33 @@
 import { create } from 'zustand';
 
-import {
-  CSRF_TOKEN_STORAGE_KEY,
-  LOGGED_IN_TOKEN_STORAGE_KEY,
-  RETRY_LOGIN_STORAGE_KEY,
-  USER_INFO_TOKEN_STORAGE_KEY
-} from './constants';
-import { Storage } from './storage';
-import { OidcJwtClientOptions, OidcJwtClientStore } from './types';
+import { AuthState, OidcJwtClientOptions, OidcJwtClientStore } from './types';
 import { AuthService } from './utils/AuthService';
 
 function createOidcJwtClientStore(
   client: OidcJwtClientOptions | false,
-  removeTokenFromUrlFunction?: (url: string) => void
+  removeTokenFromUrlFunction?: (url: string) => void,
 ) {
-  return create<OidcJwtClientStore>(set => {
-    const initialState = {
-      userInfo: Storage.get(USER_INFO_TOKEN_STORAGE_KEY),
-      csrfToken: Storage.get(CSRF_TOKEN_STORAGE_KEY),
-      isLoggedIn: !!Storage.get(LOGGED_IN_TOKEN_STORAGE_KEY),
-      isInitialized: !client,
-      didRetryLogin: Storage.get(RETRY_LOGIN_STORAGE_KEY) === 1,
+  return create<OidcJwtClientStore>((set) => {
+    const initialState: AuthState = {
+      userInfo: undefined,
+      csrfToken: null,
+      isLoggedIn: false,
+      isInitialized: false,
+      didRetryLogin: false,
     };
 
     const service = client
       ? new AuthService({
-        client,
-        removeTokenFromUrlFunction,
-        state: initialState,
-      })
+          client,
+          removeTokenFromUrlFunction,
+          state: initialState,
+        })
       : null;
 
     return {
       service,
       authState: initialState,
-      setState: newState => set({ authState: newState }),
+      setState: (newState) => set({ authState: newState }),
     };
   });
 }
