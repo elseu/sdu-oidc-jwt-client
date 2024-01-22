@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1beta1
+kind: Component
+metadata:
+  name: sdu-oidc-jwt-client
+  description: "Fetch JWTs for API access from oidc-jwt-provider"
+  annotations:
+    github.com/project-slug: elseu/sdu-oidc-jwt-client
+    backstage.io/source-location: url:https://github.com/elseu/sdu-oidc-jwt-client/
+  tags:
+    - typescript
+spec:
+  type: unspecified
+  owner: team-auth-onboarding
+  lifecycle: unspecified
