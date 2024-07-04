@@ -1,0 +1,5 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": ["npm", "github-actions"],
+  "extends": ["local>elseu/sdu-renovate", "local>elseu/sdu-renovate:gha"]
+}

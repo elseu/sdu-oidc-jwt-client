@@ -21,12 +21,7 @@ interface TemplateProps {
 }
 
 const Template: Story<TemplateProps> = (props: TemplateProps) => {
-  const {
-    url,
-    shouldAttemptLogin = false,
-    shouldMonitorAccessTokens = false,
-    testApiUrl,
-  } = props;
+  const { url, shouldAttemptLogin = false, shouldMonitorAccessTokens = false, testApiUrl } = props;
   return (
     <OidcJwtProvider
       client={{ url, csrfTokenMethod: CsrfTokenMethod.HEADER }}
@@ -132,14 +127,26 @@ const Content = (props: ContentProps) => {
   return (
     <>
       <div>
-        {isLoggedIn && <button type="button" onClick={onClickLogout}>Log out</button>}
         {isLoggedIn && (
-          <button type="button" onClick={onClickFetchToken}>Fetch token</button>
+          <button type="button" onClick={onClickLogout}>
+            Log out
+          </button>
+        )}
+        {isLoggedIn && (
+          <button type="button" onClick={onClickFetchToken}>
+            Fetch token
+          </button>
         )}
         {testApiUrl && (
-          <button type="button" onClick={onClickCallApi}>Call API</button>
+          <button type="button" onClick={onClickCallApi}>
+            Call API
+          </button>
         )}
-        {!isLoggedIn && <button type="button" onClick={onClickLogin}>Log in</button>}
+        {!isLoggedIn && (
+          <button type="button" onClick={onClickLogin}>
+            Log in
+          </button>
+        )}
         {token && (
           <>
             <h2>Token</h2>
@@ -199,7 +206,7 @@ const LargeTextArea = ({ value }: LargeTextAreaProps) => {
 export const Login = Template.bind({});
 
 Login.args = {
-  url: 'https://api-auth.ota.titan2.awssdu.nl',
+  url: 'https://api-auth.oidc.ro2.dev.sduoneplatform.nl',
   testApiUrl: 'https://api-auth-test.ota.titan2.awssdu.nl',
   shouldAttemptLogin: true,
   shouldMonitorAccessTokens: true,
