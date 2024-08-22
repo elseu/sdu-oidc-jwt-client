@@ -1,3 +1,6 @@
+> [!WARNING]
+> Unmaintained. Deprecated in favor of PKCE flow with https://github.com/authts/react-oidc-context. Preferably you don't use client side authentication at all and move the logic to the server.
+
 # oidc-jwt-client
 
 Fetch JWTs for API access from oidc-jwt-provider
